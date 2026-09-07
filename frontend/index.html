@@ -1425,13 +1425,16 @@
       source.connect(gainNode);
       gainNode.connect(analyser);
 
-      const FADE_S = 0.005; // 5ms ramp prevents click artifacts at sub-chunk boundaries
-      const GAIN = 1.6;     // loudness boost for live stream (~+4dB)
+      const GAIN = 3.0; // ~+9.5dB boost for live stream
       const startAt = Math.max(nextBoundary, audioCtx.currentTime);
-      gainNode.gain.setValueAtTime(0, startAt);
-      gainNode.gain.linearRampToValueAtTime(GAIN, startAt + FADE_S);
-      gainNode.gain.setValueAtTime(GAIN, startAt + buffer.duration - FADE_S);
-      gainNode.gain.linearRampToValueAtTime(0, startAt + buffer.duration);
+      // Only declick on the very first sub-chunk of a sentence to avoid a pop.
+      // No fade-out — sub-chunks are continuous audio; fading each end causes a gap every 0.3s.
+      if (currentChunkPieces.length === 1) {
+        gainNode.gain.setValueAtTime(0, startAt);
+        gainNode.gain.linearRampToValueAtTime(GAIN, startAt + 0.003);
+      } else {
+        gainNode.gain.setValueAtTime(GAIN, startAt);
+      }
       source.start(startAt);
       isPlaying = true;
 
