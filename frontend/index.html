@@ -1409,24 +1409,28 @@
         metricTtfa.classList.add('highlight');
       }
       const int16 = new Int16Array(buf);
+      if (int16.length === 0) return;
       const float32 = new Float32Array(int16.length);
       for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768;
 
-      const trimmed = trimAudioSilence(float32, sampleRate);
-      if (trimmed.length === 0) return;
+      // Do NOT trim individual sub-chunks — trimming mid-sentence breaks timing and creates gaps.
+      // Trim happens only on the merged full sentence in scheduleSentence (for storage).
+      currentChunkPieces.push(float32);
 
-      currentChunkPieces.push(trimmed);
-
-      const buffer = audioCtx.createBuffer(1, trimmed.length, sampleRate);
-      buffer.getChannelData(0).set(trimmed);
+      const buffer = audioCtx.createBuffer(1, float32.length, sampleRate);
+      buffer.getChannelData(0).set(float32);
       const source = audioCtx.createBufferSource();
       source.buffer = buffer;
       const gainNode = audioCtx.createGain();
       source.connect(gainNode);
       gainNode.connect(analyser);
 
+      const FADE_S = 0.005; // 5ms ramp prevents click artifacts at sub-chunk boundaries
       const startAt = Math.max(nextBoundary, audioCtx.currentTime);
-      gainNode.gain.setValueAtTime(1, startAt);
+      gainNode.gain.setValueAtTime(0, startAt);
+      gainNode.gain.linearRampToValueAtTime(1, startAt + FADE_S);
+      gainNode.gain.setValueAtTime(1, startAt + buffer.duration - FADE_S);
+      gainNode.gain.linearRampToValueAtTime(0, startAt + buffer.duration);
       source.start(startAt);
       isPlaying = true;
 
@@ -1444,7 +1448,8 @@
       for (const p of currentChunkPieces) { merged.set(p, offset); offset += p.length; }
       currentChunkPieces = [];
 
-      storedSentences[index] = merged;
+      // Trim silence from the complete sentence for the full-audio player only
+      storedSentences[index] = trimAudioSilence(merged, sampleRate);
 
       // Variable inter-sentence pause based on punctuation
       const pauseMs = endPunct === ',' ? 80 : endPunct === '?' ? 200 : endPunct === '!' ? 180 : 150;
