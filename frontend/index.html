@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Movio — Live Indic Voice Streaming</title>
+  <style>
+    :root {
+      --bg: #09090b;
+      --surface: #131316;
+      --surface-2: #1a1a1f;
+      --border: #27272a;
+      --border-focus: #3f3f46;
+      --text: #fafafa;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --accent-glow: rgba(99, 102, 241, 0.15);
+      --green: #22c55e;
+      --green-glow: rgba(34, 197, 94, 0.15);
+      --amber: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.15);
+      --red: #ef4444;
+      --red-glow: rgba(239, 68, 68, 0.15);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ── */
+    .header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      backdrop-filter: blur(12px);
+      background: rgba(9, 9, 11, 0.8);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), #a855f7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .logo h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+
+    .logo h1 span {
+      color: var(--text-muted);
+      font-weight: 400;
+      font-size: 14px;
+      margin-left: 8px;
+    }
+
+    .connection {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .reconnect-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .reconnect-hint:hover { color: var(--text-secondary); text-decoration: underline; }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 10px;
+      border-radius: 20px;
+      background: var(--red-glow);
+      color: var(--red);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .status-badge.connected {
+      background: var(--green-glow);
+      color: var(--green);
+      border-color: rgba(34, 197, 94, 0.2);
+    }
+
+    .status-badge.streaming {
+      background: var(--amber-glow);
+      color: var(--amber);
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status-badge.streaming .status-dot {
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--surface-2);
+      border-color: var(--border-focus);
+    }
+
+    /* ── Layout ── */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 960px) {
+      .main { grid-template-columns: 1fr; }
+    }
+
+    /* ── Panels ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+
+    .panel-body { padding: 18px; }
+
+    /* ── Textarea ── */
+    .text-area {
+      width: 100%;
+      min-height: 180px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      resize: vertical;
+      font-family: var(--font);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .text-area:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .text-area::placeholder { color: var(--text-muted); }
+
+    /* ── Tag Preview ── */
+    .preview {
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: none;
+    }
+
+    .preview.active { display: block; }
+
+    .preview-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .preview-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: var(--mono);
+      letter-spacing: 0.02em;
+    }
+
+    .tag.amt { background: rgba(34, 197, 94, 0.1); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2); }
+    .tag.otp { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+    .tag.phone { background: rgba(99, 102, 241, 0.1); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.2); }
+    .tag.time { background: rgba(168, 85, 247, 0.1); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.2); }
+    .tag.code { background: rgba(251, 146, 60, 0.1); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.2); }
+    .tag.num { background: rgba(34, 197, 94, 0.1); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2); }
+
+    .preview-text {
+      color: var(--text-secondary);
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.5;
+      word-break: break-word;
+      white-space: pre-wrap;
+      max-height: 80px;
+      overflow-y: auto;
+    }
+
+    /* ── Controls ── */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    /* ── Visualizer ── */
+    .visualizer {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      margin-top: 16px;
+      padding: 0 2px;
+    }
+
+    .visualizer .bar {
+      flex: 1;
+      background: var(--accent);
+      border-radius: 2px;
+      height: 3px;
+      transition: height 0.06s ease-out;
+      opacity: 0.8;
+    }
+
+    /* ── Stats ── */
+    .stats {
+      display: flex;
+      gap: 24px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .stat-item { font-size: 12px; color: var(--text-muted); }
+
+    .stat-value {
+      display: block;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      font-family: var(--mono);
+      margin-bottom: 2px;
+    }
+
+    /* ── Chunk list ── */
+    .chunk-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 540px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .chunk-list::-webkit-scrollbar { width: 4px; }
+    .chunk-list::-webkit-scrollbar-track { background: transparent; }
+    .chunk-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .chunk {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      transition: all 0.2s;
+    }
+
+    .chunk.pending { opacity: 0.45; }
+
+    .chunk.speaking {
+      border-color: var(--amber);
+      background: rgba(245, 158, 11, 0.05);
+      box-shadow: 0 0 0 3px var(--amber-glow);
+    }
+
+    .chunk.done {
+      opacity: 1;
+      border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    .chunk-index {
+      flex: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .chunk.speaking .chunk-index {
+      background: var(--amber);
+      color: var(--bg);
+    }
+
+    .chunk.done .chunk-index {
+      background: var(--green);
+      color: var(--bg);
+    }
+
+    .chunk-content { flex: 1; min-width: 0; }
+
+    .chunk-original {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .chunk-normalized {
+      font-size: 11px;
+      line-height: 1.4;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    .empty-state {
+      color: var(--text-muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 40px 20px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+      </div>
+      <h1>Movio <span>Indic Voice Streaming</span></h1>
+    </div>
+    <div class="connection">
+      <div class="status-badge" id="statusBadge">
+        <span class="status-dot"></span>
+        <span id="statusLabel">Connecting...</span>
+      </div>
+      <span class="reconnect-hint" id="reconnectHint" style="display:none" onclick="connect()">Reconnect</span>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- Left: Input panel -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Input Text</span>
+      </div>
+      <div class="panel-body">
+        <textarea class="text-area" id="inputText"
+          placeholder="Type or paste Tamil / English / Tanglish text here...&#10;&#10;Examples:&#10;  Your OTP is 483927. Please do not share this.&#10;  The total fare is 1250 rupees.&#10;  உங்கள் கேப் 07:30 மணிக்கு வரும்.&#10;  Vehicle number TN45AB1234, Booking ID AB23HH097.&#10;&#10;Numbers, times, codes are auto-detected and expanded for speech."></textarea>
+
+        <div class="preview" id="previewBox">
+          <div class="preview-label">Auto-tagged output</div>
+          <div class="preview-tags" id="previewTags"></div>
+          <div class="preview-text" id="previewText"></div>
+        </div>
+
+        <div class="controls">
+          <button class="btn btn-primary" id="synthBtn" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Speak
+          </button>
+          <button class="btn btn-secondary" id="playEntireBtn" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Replay All
+          </button>
+        </div>
+
+        <div class="visualizer" id="viz"></div>
+
+        <div class="stats">
+          <div class="stat-item">
+            <span class="stat-value" id="statFirstByte">&mdash;</span>
+            First audio
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="statChunks">&mdash;</span>
+            Chunks
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="statTotal">&mdash;</span>
+            Total time
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Chunks panel -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Sentence Chunks</span>
+      </div>
+      <div class="panel-body">
+        <div class="chunk-list" id="chunkList">
+          <div class="empty-state">
+            Chunks will appear here when you speak a paragraph.<br/>
+            Each sentence highlights as audio streams in real-time.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const statusBadge  = document.getElementById('statusBadge');
+    const statusLabel  = document.getElementById('statusLabel');
+    const reconnectHint = document.getElementById('reconnectHint');
+    const synthBtn     = document.getElementById('synthBtn');
+    const playEntireBtn = document.getElementById('playEntireBtn');
+    const inputText    = document.getElementById('inputText');
+    const previewBox   = document.getElementById('previewBox');
+    const previewText  = document.getElementById('previewText');
+    const previewTags  = document.getElementById('previewTags');
+    const chunkList    = document.getElementById('chunkList');
+    const vizEl        = document.getElementById('viz');
+    const statFirstByte = document.getElementById('statFirstByte');
+    const statChunks   = document.getElementById('statChunks');
+    const statTotal    = document.getElementById('statTotal');
+
+    let ws = null;
+    let audioCtx = null;
+    let analyser = null;
+    let sampleRate = 44100;
+    let synthStart = 0;
+    let firstByteRecorded = false;
+    let nextBoundary = 0;
+    let lastGainNode = null;
+    let lastBufferDuration = 0;
+    let currentChunkPieces = [];
+    let scheduledTimeouts = [];
+    let storedSentences = [];
+    let entireAudioSource = null;
+    let entireAudioTimeouts = [];
+    let rawChunks = [];
+
+    // Visualizer bars
+    const NUM_BARS = 48;
+    for (let i = 0; i < NUM_BARS; i++) {
+      const b = document.createElement('div');
+      b.className = 'bar';
+      vizEl.appendChild(b);
+    }
+    const bars = vizEl.querySelectorAll('.bar');
+
+    function animateViz() {
+      requestAnimationFrame(animateViz);
+      if (!analyser) return;
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(data);
+      const step = Math.floor(data.length / NUM_BARS);
+      for (let i = 0; i < NUM_BARS; i++) {
+        const v = data[i * step] || 0;
+        bars[i].style.height = Math.max(3, (v / 255) * 44) + 'px';
+      }
+    }
+    animateViz();
+
+    function setStatus(state) {
+      statusBadge.className = 'status-badge' + (state !== 'disconnected' ? ' ' + state : '');
+      statusLabel.textContent = state === 'connected' ? 'Connected' : state === 'streaming' ? 'Streaming' : 'Disconnected';
+      synthBtn.disabled = state === 'disconnected';
+      reconnectHint.style.display = state === 'disconnected' ? 'inline' : 'none';
+    }
+
+    function ensureAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 128;
+        analyser.connect(audioCtx.destination);
+        nextBoundary = audioCtx.currentTime;
+      } else if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    // ── Auto-tagger (mirrors backend tag format) ──
+    function autoTagText(text) {
+      if (!text || !text.trim()) return '';
+      const placeholders = [];
+      function saveTag(val) { placeholders.push(val); return '___AT_' + (placeholders.length - 1) + '___'; }
+
+      text = text.replace(/\{\{([A-Za-z]+):([^}]+)\}\}/g, (m, tag, val) =>
+        saveTag('{{' + tag.toUpperCase() + ':' + val.trim() + '}}'));
+
+      const durationRe = /\b(\d+)(?::00)?\s*(minutes?|mins?|sec(?:onds?)?|hrs?|hours?|நிமிடங்கள்?|நிமிடம்|வினாடிகள்?|மணி)(?:-ல்)?\b/gi;
+      text = text.replace(durationRe, (m, num, unit) =>
+        saveTag('{{AMOUNT:' + num + '}}') + ' ' + unit + (m.endsWith('-ல்') ? '-ல்' : ''));
+
+      text = text.replace(/\b(0?[0-9]|1[0-9]|2[0-3]):([0-5][0-9])(?:\s*(am|pm))?\b(?!\s*(?:min|sec|hour|நிமி))/gi, (m, hStr, mm, ampm) => {
+        let hh = parseInt(hStr, 10);
+        if (ampm) { ampm = ampm.toLowerCase(); if (ampm === 'pm' && hh < 12) hh += 12; if (ampm === 'am' && hh === 12) hh = 0; }
+        return saveTag('{{TIME:' + (hh < 10 ? '0' + hh : '' + hh) + ':' + mm + '}}');
+      });
+
+      text = text.replace(/\b([A-Z])\.\s+([A-Z][a-z]+)\b/g, '$1 $2');
+      text = text.replace(/\b(Dr|Mr|Mrs|Ms|Prof|St|No|Rd|Ave)\.\s+/gi, '$1 ');
+
+      const SC = "AN|AP|AR|AS|BR|CG|CH|DD|DL|DN|GA|GJ|HP|HR|JH|JK|KA|KL|LA|LD|MH|ML|MN|MP|MZ|NL|OD|OR|PB|PY|RJ|SK|TN|TR|TS|UA|UK|UP|WB";
+      const carRe = new RegExp(`\\b(${SC})[ -]?([0-9]{1,2})[ -]?([A-Za-z]{1,3})?[ -]?([0-9]{1,4})\\b`, 'gi');
+      const bhRe = /\b([0-9]{2})[ -]?(BH)[ -]?([0-9]{4})[ -]?([A-Za-z]{1,2})\b/gi;
+
+      text = text.replace(carRe, m => saveTag('{{CODE:' + m.replace(/[\s-]+/g, '').toUpperCase() + '}}'));
+      text = text.replace(bhRe, m => saveTag('{{CODE:' + m.replace(/[\s-]+/g, '').toUpperCase() + '}}'));
+
+      const codePreRe = /\b((?:booking\s*id|order\s*id|pnr|ref(?:erence)?\s*id)\s*(?:is|:|[-])?\s*)([A-Za-z0-9]{3,14})\b/gi;
+      text = text.replace(codePreRe, (m, pre, code) => {
+        pre = pre.replace(/\bID\b/gi, 'I-D').trim().replace(/[:\-]+$/, '') + ': ';
+        return pre + saveTag('{{CODE:' + code.toUpperCase() + '}}');
+      });
+
+      text = text.replace(/\b(?=[A-Za-z0-9]{5,12}\b)(?=[A-Za-z0-9]*[A-Za-z])(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{5,12}\b/g, m =>
+        saveTag('{{CODE:' + m.toUpperCase() + '}}'));
+
+      const otpRe = /\b((?:otp|pin|passcode|verification\s*code|one\s*time\s*password|ரகசிய\s*எண்|கடவுச்சொல்)\s*(?:is|:|[-])?\s*)(\d{4,8})\b/gi;
+      text = text.replace(otpRe, (m, pre, digits) => {
+        pre = pre.replace(/\bOTP\b/gi, 'O-T-P').trim().replace(/[:\-]+$/, '') + ', ';
+        return pre + saveTag('{{OTP:' + digits + '}}');
+      });
+
+      const phoneRe = /\b((?:phone(?:\s*number)?|mobile(?:\s*number)?|call|contact|cell|tel|whatsapp|ph|தொடர்புக்கு|தொலைபேசி|அழைக்க)\s*(?:is|:|[-])?\s*)(?:\+?91[\s-]?)?([6-9]\d{9})\b/gi;
+      text = text.replace(phoneRe, (m, pre, num) => {
+        pre = pre.trim().replace(/[:\-]+$/, '') + ': ';
+        return pre + saveTag('{{PHONE:' + num + '}}');
+      });
+
+      text = text.replace(/\b(?:\+91[\s-]?)?([6-9]\d{9})\b/g, (m, num) => saveTag('{{PHONE:' + num + '}}'));
+
+      text = text.replace(/(?:₹|rs\.?|inr|\$|usd|ரூபாய்|ரூ\.?)\s*(\d[\d,]*(?:\.\d+)?)\b/gi, (m, num) =>
+        saveTag('{{AMOUNT:' + num.replace(/,/g, '') + '}}') + ' rupees');
+
+      text = text.replace(/\b(\d[\d,]*(?:\.\d+)?)\s*(rupees|rs\.?|inr|usd|ரூபாய்)/gi, (m, num, unit) =>
+        saveTag('{{AMOUNT:' + num.replace(/,/g, '') + '}}') + ' ' + unit);
+
+      const amtRe = /\b((?:amount|fare|price|cost|bill|fee|rent|total|balance|paid|charge|charges|due|pay|payment|cash|discount|refund|tip|tax|subtotal|விலை|கட்டணம்|தொகை|வாடகை|செலவு|பணம்)\s*(?:is|of|:|[-])?\s*)(\d[\d,]*(?:\.\d+)?)\b/gi;
+      text = text.replace(amtRe, (m, pre, num) => {
+        pre = pre.trim().replace(/[:\-]+$/, '') + ': ';
+        return pre + saveTag('{{AMOUNT:' + num.replace(/,/g, '') + '}}');
+      });
+
+      text = text.replace(/\b\d[\d,]*(?:\.\d+)?\b/g, m => saveTag('{{AMOUNT:' + m.replace(/,/g, '') + '}}'));
+      text = text.replace(/\bOTP\b/g, 'O-T-P');
+      text = text.replace(/\bUPI\b/g, 'U-P-I');
+      text = text.replace(/\bID\b/g, 'I-D');
+
+      for (let i = 0; i < placeholders.length; i++) text = text.replace('___AT_' + i + '___', placeholders[i]);
+      return text.replace(/\s{2,}/g, ' ').trim();
+    }
+
+    function updateTagPreview() {
+      const raw = inputText.value.trim();
+      if (!raw) { previewBox.classList.remove('active'); return; }
+      const tagged = autoTagText(raw);
+      previewText.textContent = tagged;
+      const tags = [...tagged.matchAll(/\{\{([A-Z]+):([^}]+)\}\}/g)];
+      if (tags.length > 0) {
+        previewBox.classList.add('active');
+        previewTags.innerHTML = '';
+        const seen = new Set();
+        tags.forEach(m => {
+          const key = m[1] + ':' + m[2];
+          if (seen.has(key)) return;
+          seen.add(key);
+          const pill = document.createElement('span');
+          pill.className = 'tag ' + m[1].toLowerCase();
+          pill.textContent = m[1] + ': ' + m[2];
+          previewTags.appendChild(pill);
+        });
+      } else {
+        previewBox.classList.remove('active');
+      }
+    }
+
+    inputText.addEventListener('input', updateTagPreview);
+
+    // ── Audio trim ──
+    function trimAudioSilence(float32, sr = 44100, threshold = 0.0008, padMs = 80) {
+      const padSamples = Math.floor((padMs / 1000) * sr);
+      const windowSize = 256;
+      const len = float32.length;
+      if (len <= windowSize) return float32;
+      let start = 0;
+      for (let i = 0; i < len - windowSize; i += 64) {
+        let sumSq = 0;
+        for (let j = 0; j < windowSize; j++) sumSq += float32[i + j] * float32[i + j];
+        if (Math.sqrt(sumSq / windowSize) > threshold) { start = Math.max(0, i - padSamples); break; }
+      }
+      const trimmed = float32.slice(start);
+      const fadeSamples = Math.min(Math.floor(0.005 * sr), Math.floor(trimmed.length / 8));
+      for (let i = 0; i < fadeSamples; i++) trimmed[i] *= (i / fadeSamples);
+      return trimmed;
+    }
+
+    // ── WebSocket (auto-connect to same origin) ──
+    let reconnectTimer = null;
+
+    function getWsUrl() {
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      return proto + '//' + location.host + '/ws';
+    }
+
+    function connect() {
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      const url = getWsUrl();
+      ensureAudioContext();
+      ws = new WebSocket(url);
+      ws.binaryType = 'arraybuffer';
+      ws.onopen = () => setStatus('connected');
+      ws.onclose = () => { setStatus('disconnected'); scheduleReconnect(); };
+      ws.onerror = () => {};
+      ws.onmessage = (event) => {
+        if (typeof event.data === 'string') handleControl(JSON.parse(event.data));
+        else handleAudioFrame(event.data);
+      };
+    }
+
+    function scheduleReconnect() {
+      if (reconnectTimer) return;
+      reconnectTimer = setTimeout(() => { reconnectTimer = null; connect(); }, 3000);
+    }
+
+    function handleControl(msg) {
+      if (msg.type === 'config') {
+        sampleRate = msg.sample_rate;
+      } else if (msg.type === 'chunks') {
+        rawChunks = msg.raw_chunks || msg.chunks;
+        renderChunks(msg.raw_chunks || msg.chunks, msg.chunks);
+        statChunks.textContent = msg.chunks.length;
+        storedSentences = new Array(msg.chunks.length).fill(null);
+        playEntireBtn.disabled = true;
+        setStatus('streaming');
+      } else if (msg.type === 'chunk_start') {
+        currentChunkPieces = [];
+      } else if (msg.type === 'chunk_end') {
+        scheduleSentence(msg.index);
+      } else if (msg.type === 'done') {
+        setStatus('connected');
+        statTotal.textContent = ((performance.now() - synthStart) / 1000).toFixed(2) + 's';
+        if (storedSentences.some(s => s && s.length > 0)) playEntireBtn.disabled = false;
+      }
+    }
+
+    function handleAudioFrame(buf) {
+      if (!firstByteRecorded) {
+        firstByteRecorded = true;
+        statFirstByte.textContent = ((performance.now() - synthStart) / 1000).toFixed(2) + 's';
+      }
+      const int16 = new Int16Array(buf);
+      const float32 = new Float32Array(int16.length);
+      for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768;
+      currentChunkPieces.push(float32);
+    }
+
+    function scheduleSentence(index) {
+      if (currentChunkPieces.length === 0) { markChunk(index, 'done'); return; }
+      let totalLen = 0;
+      for (const p of currentChunkPieces) totalLen += p.length;
+      const merged = new Float32Array(totalLen);
+      let offset = 0;
+      for (const p of currentChunkPieces) { merged.set(p, offset); offset += p.length; }
+      currentChunkPieces = [];
+
+      const trimmed = trimAudioSilence(merged, sampleRate);
+      if (trimmed.length === 0) { markChunk(index, 'done'); return; }
+
+      let maxPeak = 0;
+      for (let i = 0; i < trimmed.length; i++) { const a = Math.abs(trimmed[i]); if (a > maxPeak) maxPeak = a; }
+      if (maxPeak > 0.02) {
+        const gain = Math.max(0.3, Math.min(2.5, 0.80 / maxPeak));
+        for (let i = 0; i < trimmed.length; i++) trimmed[i] *= gain;
+      }
+
+      storedSentences[index] = trimmed;
+
+      const buffer = audioCtx.createBuffer(1, trimmed.length, sampleRate);
+      buffer.getChannelData(0).set(trimmed);
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      const gainNode = audioCtx.createGain();
+      source.connect(gainNode);
+      gainNode.connect(analyser);
+
+      const startAt = Math.max(lastGainNode ? nextBoundary + 0.10 : audioCtx.currentTime, audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(1, startAt);
+      source.start(startAt);
+
+      const delay = Math.max(0, (startAt - audioCtx.currentTime) * 1000);
+      scheduledTimeouts.push(setTimeout(() => markChunk(index, 'speaking'), delay));
+      source.onended = () => markChunk(index, 'done');
+
+      nextBoundary = startAt + buffer.duration;
+      lastGainNode = gainNode;
+      lastBufferDuration = buffer.duration;
+    }
+
+    function renderChunks(rawList, normalizedList) {
+      chunkList.innerHTML = '';
+      rawList.forEach((text, i) => {
+        const el = document.createElement('div');
+        el.className = 'chunk pending';
+        el.id = 'chunk-' + i;
+        const norm = normalizedList[i] || '';
+        el.innerHTML = `<div class="chunk-index">${i + 1}</div>
+          <div class="chunk-content">
+            <div class="chunk-original">${escapeHtml(text)}</div>
+            ${norm !== text ? `<div class="chunk-normalized">${escapeHtml(norm)}</div>` : ''}
+          </div>`;
+        chunkList.appendChild(el);
+      });
+    }
+
+    function markChunk(index, state) {
+      const el = document.getElementById('chunk-' + index);
+      if (!el) return;
+      el.className = 'chunk ' + state;
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function stopEntirePlayback() {
+      if (entireAudioSource) { try { entireAudioSource.stop(); } catch(e) {} entireAudioSource = null; }
+      entireAudioTimeouts.forEach(t => clearTimeout(t));
+      entireAudioTimeouts = [];
+    }
+
+    function playEntireAudio() {
+      const valid = storedSentences.filter(s => s && s.length > 0);
+      if (valid.length === 0) return;
+      ensureAudioContext();
+      stopEntirePlayback();
+
+      const pauseSamples = Math.floor(0.08 * sampleRate);
+      let totalLength = 0;
+      for (let i = 0; i < storedSentences.length; i++) {
+        if (storedSentences[i]) {
+          totalLength += storedSentences[i].length;
+          if (i < storedSentences.length - 1) totalLength += pauseSamples;
+        }
+      }
+
+      const merged = new Float32Array(totalLength);
+      let offset = 0;
+      const offsets = [];
+
+      for (let i = 0; i < storedSentences.length; i++) {
+        if (storedSentences[i]) {
+          offsets.push({ index: i, start: offset, length: storedSentences[i].length });
+          merged.set(storedSentences[i], offset);
+          offset += storedSentences[i].length;
+          if (i < storedSentences.length - 1) offset += pauseSamples;
+        }
+      }
+
+      const buffer = audioCtx.createBuffer(1, merged.length, sampleRate);
+      buffer.getChannelData(0).set(merged);
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(analyser);
+      entireAudioSource = source;
+
+      for (let i = 0; i < storedSentences.length; i++) markChunk(i, 'pending');
+      source.start(audioCtx.currentTime);
+
+      offsets.forEach(info => {
+        const delayMs = (info.start / sampleRate) * 1000;
+        const durMs = (info.length / sampleRate) * 1000;
+        entireAudioTimeouts.push(setTimeout(() => markChunk(info.index, 'speaking'), delayMs));
+        entireAudioTimeouts.push(setTimeout(() => markChunk(info.index, 'done'), delayMs + durMs));
+      });
+
+      source.onended = () => {
+        entireAudioSource = null;
+        for (let i = 0; i < storedSentences.length; i++) markChunk(i, 'done');
+      };
+    }
+
+    function synthesize() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) { alert('Not connected.'); return; }
+      const raw = inputText.value.trim();
+      if (!raw) return;
+
+      ensureAudioContext();
+      stopEntirePlayback();
+      storedSentences = [];
+      playEntireBtn.disabled = true;
+      scheduledTimeouts.forEach(t => clearTimeout(t));
+      scheduledTimeouts = [];
+      nextBoundary = audioCtx.currentTime;
+      lastGainNode = null;
+      lastBufferDuration = 0;
+      currentChunkPieces = [];
+      firstByteRecorded = false;
+      synthStart = performance.now();
+      statFirstByte.textContent = '—';
+      statTotal.textContent = '—';
+
+      const processed = autoTagText(raw);
+      updateTagPreview();
+      ws.send(JSON.stringify({ type: 'synthesize', text: processed }));
+    }
+
+    synthBtn.addEventListener('click', synthesize);
+    playEntireBtn.addEventListener('click', () => {
+      if (entireAudioSource) {
+        stopEntirePlayback();
+        for (let i = 0; i < storedSentences.length; i++) markChunk(i, 'done');
+      } else {
+        playEntireAudio();
+      }
+    });
+
+    setStatus('disconnected');
+    connect();
+  </script>
+</body>
+</html>

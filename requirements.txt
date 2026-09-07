@@ -1,0 +1,11 @@
+git+https://github.com/huggingface/parler-tts.git
+transformers==4.46.1
+accelerate
+sentencepiece
+soundfile
+indic-numtowords
+protobuf==5.29.5
+fastapi
+uvicorn[standard]
+numpy
+torch
