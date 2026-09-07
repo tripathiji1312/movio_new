@@ -76,11 +76,18 @@ def spell_digits(digit_str: str) -> str:
 
 def spell_alnum_code(code: str) -> str:
     parts = []
+    prev = None
     for ch in code:
         if ch.isdigit():
             parts.append(EN_DIGIT_WORDS[ch])
+            prev = ch
         elif ch.isalpha():
-            parts.append(EN_LETTER_NAMES.get(ch.upper(), ch.upper()))
+            letter = EN_LETTER_NAMES.get(ch.upper(), ch.upper())
+            if prev and prev.upper() == ch.upper():
+                parts[-1] = f"double {letter}"
+            else:
+                parts.append(letter)
+            prev = ch
     return " ".join(parts)
 
 
