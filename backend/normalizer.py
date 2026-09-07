@@ -18,6 +18,35 @@ EN_LETTER_NAMES = {
 
 PRONUNCIATION_OVERRIDES = {
     "mins": "minutes",
+    "min": "minutes",
+    "sec": "seconds",
+    "secs": "seconds",
+    "hrs": "hours",
+    "hr": "hour",
+    "km": "kilometers",
+    "kms": "kilometers",
+    "kg": "kilograms",
+    "kgs": "kilograms",
+    "gm": "grams",
+    "gms": "grams",
+    "ltr": "liters",
+    "ltrs": "liters",
+    "amt": "amount",
+    "approx": "approximately",
+    "govt": "government",
+    "dept": "department",
+    "est": "estimated",
+    "avg": "average",
+    "info": "information",
+    "nos": "numbers",
+    "appt": "appointment",
+    "addr": "address",
+    "msg": "message",
+    "txn": "transaction",
+    "acct": "account",
+    "bal": "balance",
+    "qty": "quantity",
+    "ref": "reference",
     "Journey": "ஜர்னி",
 }
 
@@ -75,11 +104,18 @@ def spell_time(hh: str, mm: str) -> str:
 
 
 def spell_amount(num_str: str, lang: str = "en") -> str:
-    cleaned = re.sub(r'[^\d.]', '', str(num_str)).split('.')[0].strip()
+    cleaned = re.sub(r'[^\d.]', '', str(num_str)).strip()
     if not cleaned:
         return num_str
-    n = int(cleaned)
-    return indic_num2words(n, lang="en")
+    parts = cleaned.split('.')
+    whole = parts[0] or '0'
+    result = indic_num2words(int(whole), lang="en")
+    if len(parts) > 1 and parts[1]:
+        decimal = parts[1]
+        result += " point " + " ".join(
+            indic_num2words(int(d), lang="en") for d in decimal
+        )
+    return result
 
 
 def apply_pronunciation_overrides(text: str) -> str:

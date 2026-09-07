@@ -76,7 +76,19 @@ def split_long_sentence(sentence: str, max_chars: int = MAX_CHUNK_CHARS):
 
 def split_into_sentences(text: str):
     sentences = [s.strip() for s in SENTENCE_SPLIT_RE.split(text.strip()) if s.strip()]
-    chunks = []
+    pieces = []
     for s in sentences:
-        chunks.extend(split_long_sentence(s))
-    return chunks
+        pieces.extend(split_long_sentence(s))
+
+    merged = []
+    current = ""
+    for piece in pieces:
+        candidate = (current + " " + piece) if current else piece
+        if current and len(candidate) > MAX_CHUNK_CHARS:
+            merged.append(current)
+            current = piece
+        else:
+            current = candidate
+    if current:
+        merged.append(current)
+    return merged
