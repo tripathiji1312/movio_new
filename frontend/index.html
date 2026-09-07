@@ -1257,7 +1257,7 @@
 
       const codePreRe = /\b((?:booking\s*id|order\s*id|pnr|ref(?:erence)?\s*id)\s*(?:is|:|[-])?\s*)([A-Za-z0-9]{3,14})\b/gi;
       text = text.replace(codePreRe, (m, pre, code) => {
-        pre = pre.replace(/\bID\b/gi, 'I-D').trim().replace(/[:\-]+$/, '') + ': ';
+        pre = pre.trim().replace(/[:\-]+$/, '') + ': ';
         return pre + saveTag('{{CODE:' + code.toUpperCase() + '}}');
       });
 
@@ -1266,7 +1266,7 @@
 
       const otpRe = /\b((?:otp|pin|passcode|verification\s*code|one\s*time\s*password|ரகசிய\s*எண்|கடவுச்சொல்)\s*(?:is|:|[-])?\s*)(\d{4,8})\b/gi;
       text = text.replace(otpRe, (m, pre, digits) => {
-        pre = pre.replace(/\bOTP\b/gi, 'O-T-P').trim().replace(/[:\-]+$/, '') + ', ';
+        pre = pre.trim().replace(/[:\-]+$/, '') + ', ';
         return pre + saveTag('{{OTP:' + digits + '}}');
       });
 
@@ -1291,10 +1291,6 @@
       });
 
       text = text.replace(/\b\d[\d,]*(?:\.\d+)?\b/g, m => saveTag('{{AMOUNT:' + m.replace(/,/g, '') + '}}'));
-      text = text.replace(/\bOTP\b/g, 'O-T-P');
-      text = text.replace(/\bUPI\b/g, 'U-P-I');
-      text = text.replace(/\bID\b/g, 'I-D');
-
       for (let i = 0; i < placeholders.length; i++) text = text.replace('___AT_' + i + '___', placeholders[i]);
       return text.replace(/\s{2,}/g, ' ').trim();
     }

@@ -38,7 +38,6 @@ def cache_put(text: str, pcm_bytes: bytes):
     while len(_audio_cache) > CACHE_MAX_ENTRIES:
         _audio_cache.popitem(last=False)
 
-TARGET_PEAK = 0.80
 SILENCE_THRESHOLD = 0.005
 FADE_SAMPLES = 480
 
@@ -66,11 +65,6 @@ def postprocess_chunk_audio(samples: np.ndarray, sample_rate: int) -> np.ndarray
     if fade_len > 0:
         fade = np.linspace(1.0, 0.0, fade_len, dtype=np.float32)
         samples[-fade_len:] *= fade
-
-    peak = np.max(np.abs(samples))
-    if peak > 0.01:
-        gain = np.clip(TARGET_PEAK / peak, 0.5, 2.0)
-        samples = samples * gain
 
     return np.clip(samples, -1.0, 1.0)
 
