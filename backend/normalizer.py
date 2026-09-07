@@ -47,6 +47,7 @@ PRONUNCIATION_OVERRIDES = {
     "bal": "balance",
     "qty": "quantity",
     "ref": "reference",
+    "ID": "I D",
     "Journey": "ஜர்னி",
 }
 
@@ -80,12 +81,31 @@ def spell_digits(digit_str: str) -> str:
 
 
 def spell_alnum_code(code: str) -> str:
-    parts = []
+    groups = []
+    current_type = None
+    current = ""
     for ch in code:
-        if ch.upper() in EN_LETTER_NAMES:
-            parts.append(EN_LETTER_NAMES[ch.upper()])
-        elif ch in EN_DIGIT_WORDS:
-            parts.append(EN_DIGIT_WORDS[ch])
+        if ch.isalpha():
+            if current_type == "digit" and current:
+                groups.append(current)
+                current = ""
+            current_type = "alpha"
+            current += ch.upper()
+        elif ch.isdigit():
+            if current_type == "alpha" and current:
+                groups.append(current)
+                current = ""
+            current_type = "digit"
+            current += ch
+    if current:
+        groups.append(current)
+
+    parts = []
+    for g in groups:
+        if g.isdigit():
+            parts.append(", ".join(EN_DIGIT_WORDS[d] for d in g))
+        else:
+            parts.append(g)
     return ", ".join(parts)
 
 

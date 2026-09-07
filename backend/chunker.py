@@ -74,6 +74,9 @@ def split_long_sentence(sentence: str, max_chars: int = MAX_CHUNK_CHARS):
     return grouped
 
 
+MIN_MERGE_CHARS = 25
+
+
 def split_into_sentences(text: str):
     sentences = [s.strip() for s in SENTENCE_SPLIT_RE.split(text.strip()) if s.strip()]
     pieces = []
@@ -84,11 +87,13 @@ def split_into_sentences(text: str):
     current = ""
     for piece in pieces:
         candidate = (current + " " + piece) if current else piece
-        if current and len(candidate) > MAX_CHUNK_CHARS:
+        if not current:
+            current = piece
+        elif len(piece) < MIN_MERGE_CHARS and len(candidate) <= MAX_CHUNK_CHARS:
+            current = candidate
+        else:
             merged.append(current)
             current = piece
-        else:
-            current = candidate
     if current:
         merged.append(current)
     return merged
