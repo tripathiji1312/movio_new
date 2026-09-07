@@ -8,13 +8,7 @@ EN_DIGIT_WORDS = {
     '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine',
 }
 
-EN_LETTER_NAMES = {
-    'A': 'A', 'B': 'B', 'C': 'C', 'D': 'D', 'E': 'E',
-    'F': 'F', 'G': 'G', 'H': 'H', 'I': 'I', 'J': 'J',
-    'K': 'K', 'L': 'L', 'M': 'M', 'N': 'N', 'O': 'O',
-    'P': 'P', 'Q': 'Q', 'R': 'R', 'S': 'S', 'T': 'T',
-    'U': 'U', 'V': 'V', 'W': 'W', 'X': 'X', 'Y': 'Y', 'Z': 'Z',
-}
+EN_LETTER_NAMES = {c: c for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'}
 
 PRONUNCIATION_OVERRIDES = {
     "mins": "minutes",
@@ -77,42 +71,23 @@ def contains_tamil(text: str) -> bool:
 
 
 def spell_digits(digit_str: str) -> str:
-    return ", ".join(EN_DIGIT_WORDS[d] for d in digit_str if d.isdigit())
+    return " ".join(EN_DIGIT_WORDS[d] for d in digit_str if d.isdigit())
 
 
 def spell_alnum_code(code: str) -> str:
-    groups = []
-    current_type = None
-    current = ""
-    for ch in code:
-        if ch.isalpha():
-            if current_type == "digit" and current:
-                groups.append(current)
-                current = ""
-            current_type = "alpha"
-            current += ch.upper()
-        elif ch.isdigit():
-            if current_type == "alpha" and current:
-                groups.append(current)
-                current = ""
-            current_type = "digit"
-            current += ch
-    if current:
-        groups.append(current)
-
     parts = []
-    for g in groups:
-        if g.isdigit():
-            parts.append(", ".join(EN_DIGIT_WORDS[d] for d in g))
-        else:
-            parts.append(g)
-    return ", ".join(parts)
+    for ch in code:
+        if ch.isdigit():
+            parts.append(EN_DIGIT_WORDS[ch])
+        elif ch.isalpha():
+            parts.append(EN_LETTER_NAMES.get(ch.upper(), ch.upper()))
+    return " ".join(parts)
 
 
 def spell_time(hh: str, mm: str) -> str:
     h = int(hh) % 24
     m = int(mm)
-    period = "AM" if h < 12 else "PM"
+    period = "A M" if h < 12 else "P M"
     h12 = h % 12
     h12 = 12 if h12 == 0 else h12
     hour_word = indic_num2words(h12, lang="en")
