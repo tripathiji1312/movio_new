@@ -1385,7 +1385,7 @@
         }
         updateCacheMetric();
       } else if (msg.type === 'chunk_end') {
-        scheduleSentence(msg.index);
+        scheduleSentence(msg.index, msg.end_punct || '.');
       } else if (msg.type === 'done') {
         setStatus('connected');
         valTotal.textContent = ((performance.now() - synthStart) / 1000).toFixed(2) + 's';
@@ -1404,30 +1404,18 @@
     function handleAudioFrame(buf) {
       if (!firstByteRecorded) {
         firstByteRecorded = true;
-        const ttfa = ((performance.now() - synthStart) / 1000).toFixed(2) + 's';
-        valTtfa.textContent = ttfa;
+        valTtfa.textContent = ((performance.now() - synthStart) / 1000).toFixed(2) + 's';
         subTtfa.textContent = 'Confirmed';
         metricTtfa.classList.add('highlight');
       }
       const int16 = new Int16Array(buf);
       const float32 = new Float32Array(int16.length);
       for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768;
-      currentChunkPieces.push(float32);
-    }
 
-    function scheduleSentence(index) {
-      if (currentChunkPieces.length === 0) { markChunk(index, 'done'); return; }
-      let totalLen = 0;
-      for (const p of currentChunkPieces) totalLen += p.length;
-      const merged = new Float32Array(totalLen);
-      let offset = 0;
-      for (const p of currentChunkPieces) { merged.set(p, offset); offset += p.length; }
-      currentChunkPieces = [];
+      const trimmed = trimAudioSilence(float32, sampleRate);
+      if (trimmed.length === 0) return;
 
-      const trimmed = trimAudioSilence(merged, sampleRate);
-      if (trimmed.length === 0) { markChunk(index, 'done'); return; }
-
-      storedSentences[index] = trimmed;
+      currentChunkPieces.push(trimmed);
 
       const buffer = audioCtx.createBuffer(1, trimmed.length, sampleRate);
       buffer.getChannelData(0).set(trimmed);
@@ -1437,21 +1425,37 @@
       source.connect(gainNode);
       gainNode.connect(analyser);
 
-      const startAt = Math.max(lastGainNode ? nextBoundary + 0.10 : audioCtx.currentTime, audioCtx.currentTime);
+      const startAt = Math.max(nextBoundary, audioCtx.currentTime);
       gainNode.gain.setValueAtTime(1, startAt);
       source.start(startAt);
       isPlaying = true;
 
-      const delay = Math.max(0, (startAt - audioCtx.currentTime) * 1000);
-      scheduledTimeouts.push(setTimeout(() => markChunk(index, 'speaking'), delay));
-      source.onended = () => {
-        markChunk(index, chunkCachedFlags[index] ? 'cached' : 'done');
-        isPlaying = false;
-      };
-
       nextBoundary = startAt + buffer.duration;
       lastGainNode = gainNode;
-      lastBufferDuration = buffer.duration;
+    }
+
+    function scheduleSentence(index, endPunct) {
+      if (currentChunkPieces.length === 0) { markChunk(index, 'done'); return; }
+
+      let totalLen = 0;
+      for (const p of currentChunkPieces) totalLen += p.length;
+      const merged = new Float32Array(totalLen);
+      let offset = 0;
+      for (const p of currentChunkPieces) { merged.set(p, offset); offset += p.length; }
+      currentChunkPieces = [];
+
+      storedSentences[index] = merged;
+
+      // Variable inter-sentence pause based on punctuation
+      const pauseMs = endPunct === ',' ? 80 : endPunct === '?' ? 200 : endPunct === '!' ? 180 : 150;
+      nextBoundary += pauseMs / 1000;
+
+      markChunk(index, 'speaking');
+      const remaining = Math.max(0, (nextBoundary - audioCtx.currentTime) * 1000);
+      scheduledTimeouts.push(setTimeout(() => {
+        markChunk(index, chunkCachedFlags[index] ? 'cached' : 'done');
+        if (index === storedSentences.length - 1) isPlaying = false;
+      }, remaining));
     }
 
     function renderChunks(rawList, normalizedList) {

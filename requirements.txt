@@ -6,3 +6,6 @@ fastapi
 uvicorn[standard]
 numpy
 torch
+transformers>=4.46.1
+parler-tts
+pyloudnorm>=0.1.0

@@ -10,7 +10,7 @@ from parler_tts import ParlerTTSForConditionalGeneration
 
 from .config import (
     DEVICE, TORCH_DTYPE, MODEL_ID, VOICE_DESCRIPTION, CHARS_PER_SEC,
-    GENERATION_SEED, TEMPERATURE, TOP_K, REPETITION_PENALTY,
+    GENERATION_SEED, TEMPERATURE,
 )
 
 
@@ -123,15 +123,16 @@ class TTSEngine:
 
     def _warmup(self):
         desc = self.description_tokenizer(VOICE_DESCRIPTION, return_tensors="pt").to(DEVICE)
-        prompt = self.tokenizer("வணக்கம்.", return_tensors="pt").to(DEVICE)
-        with torch.inference_mode():
-            _ = self.model.generate(
-                input_ids=desc.input_ids,
-                attention_mask=desc.attention_mask,
-                prompt_input_ids=prompt.input_ids,
-                prompt_attention_mask=prompt.attention_mask,
-                max_new_tokens=50,
-            )
+        for text in ["வணக்கம்.", "Hello, welcome."]:
+            prompt = self.tokenizer(text, return_tensors="pt").to(DEVICE)
+            with torch.inference_mode():
+                _ = self.model.generate(
+                    input_ids=desc.input_ids,
+                    attention_mask=desc.attention_mask,
+                    prompt_input_ids=prompt.input_ids,
+                    prompt_attention_mask=prompt.attention_mask,
+                    max_new_tokens=50,
+                )
         if DEVICE.startswith("cuda"):
             torch.cuda.synchronize()
         print("Warm-up complete.")
@@ -180,8 +181,6 @@ class TTSEngine:
             streamer=streamer,
             do_sample=True,
             temperature=TEMPERATURE,
-            top_k=TOP_K,
-            repetition_penalty=REPETITION_PENALTY,
             min_new_tokens=min_new_tokens,
             max_new_tokens=estimated_max_tokens,
         )
