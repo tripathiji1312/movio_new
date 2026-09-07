@@ -9,11 +9,11 @@ EN_DIGIT_WORDS = {
 }
 
 EN_LETTER_NAMES = {
-    'A': 'A', 'B': 'bee', 'C': 'see', 'D': 'dee', 'E': 'ee',
-    'F': 'eff', 'G': 'jee', 'H': 'aitch', 'I': 'eye', 'J': 'jay',
-    'K': 'kay', 'L': 'ell', 'M': 'em', 'N': 'en', 'O': 'Oo',
-    'P': 'pee', 'Q': 'Q', 'R': 'ar', 'S': 'ess', 'T': 'tee',
-    'U': 'you', 'V': 'vee', 'W': 'double-u', 'X': 'ex', 'Y': 'why', 'Z': 'zed',
+    'A': 'A', 'B': 'B', 'C': 'C', 'D': 'D', 'E': 'E',
+    'F': 'F', 'G': 'G', 'H': 'H', 'I': 'I', 'J': 'J',
+    'K': 'K', 'L': 'L', 'M': 'M', 'N': 'N', 'O': 'O',
+    'P': 'P', 'Q': 'Q', 'R': 'R', 'S': 'S', 'T': 'T',
+    'U': 'U', 'V': 'V', 'W': 'W', 'X': 'X', 'Y': 'Y', 'Z': 'Z',
 }
 
 PRONUNCIATION_OVERRIDES = {
@@ -92,15 +92,16 @@ def spell_alnum_code(code: str) -> str:
 def spell_time(hh: str, mm: str) -> str:
     h = int(hh) % 24
     m = int(mm)
+    period = "AM" if h < 12 else "PM"
     h12 = h % 12
     h12 = 12 if h12 == 0 else h12
     hour_word = indic_num2words(h12, lang="en")
     if m == 0:
-        return f"{hour_word} o'clock"
+        return f"{hour_word} o'clock {period}"
     elif m < 10:
-        return f"{hour_word} oh {indic_num2words(m, lang='en')}"
+        return f"{hour_word} oh {indic_num2words(m, lang='en')} {period}"
     else:
-        return f"{hour_word} {indic_num2words(m, lang='en')}"
+        return f"{hour_word} {indic_num2words(m, lang='en')} {period}"
 
 
 def spell_amount(num_str: str, lang: str = "en") -> str:
