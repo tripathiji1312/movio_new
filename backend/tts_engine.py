@@ -8,7 +8,10 @@ from transformers.generation.streamers import BaseStreamer
 from transformers.modeling_outputs import BaseModelOutput
 from parler_tts import ParlerTTSForConditionalGeneration
 
-from .config import DEVICE, TORCH_DTYPE, MODEL_ID, VOICE_DESCRIPTION, CHARS_PER_SEC
+from .config import (
+    DEVICE, TORCH_DTYPE, MODEL_ID, VOICE_DESCRIPTION, CHARS_PER_SEC,
+    GENERATION_SEED, TEMPERATURE, TOP_K, REPETITION_PENALTY,
+)
 
 
 class ParlerTTSStreamerLocal(BaseStreamer):
@@ -176,13 +179,17 @@ class TTSEngine:
             prompt_attention_mask=prompt_ids.attention_mask,
             streamer=streamer,
             do_sample=True,
-            temperature=0.7,
-            repetition_penalty=1.25,
+            temperature=TEMPERATURE,
+            top_k=TOP_K,
+            repetition_penalty=REPETITION_PENALTY,
             min_new_tokens=min_new_tokens,
             max_new_tokens=estimated_max_tokens,
         )
 
         def _run(**kwargs):
+            torch.manual_seed(GENERATION_SEED)
+            if DEVICE.startswith("cuda"):
+                torch.cuda.manual_seed(GENERATION_SEED)
             with torch.inference_mode():
                 self.model.generate(**kwargs)
 
