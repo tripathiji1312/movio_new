@@ -5,54 +5,88 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Movio — Live Indic Voice Streaming</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #09090b;
-      --surface: #131316;
-      --surface-2: #1a1a1f;
-      --border: #27272a;
-      --border-focus: #3f3f46;
-      --text: #fafafa;
-      --text-secondary: #a1a1aa;
-      --text-muted: #71717a;
+      --bg: #07090e;
+      --surface: rgba(15, 23, 42, 0.7);
+      --surface-2: rgba(30, 41, 59, 0.55);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-hover: rgba(255, 255, 255, 0.14);
+      --border-focus: rgba(99, 102, 241, 0.4);
+      --text: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
       --accent: #6366f1;
       --accent-hover: #818cf8;
-      --accent-glow: rgba(99, 102, 241, 0.15);
-      --green: #22c55e;
-      --green-glow: rgba(34, 197, 94, 0.15);
+      --accent-glow: rgba(99, 102, 241, 0.2);
+      --cyan: #06b6d4;
+      --cyan-glow: rgba(6, 182, 212, 0.25);
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.2);
       --amber: #f59e0b;
       --amber-glow: rgba(245, 158, 11, 0.15);
-      --red: #ef4444;
-      --red-glow: rgba(239, 68, 68, 0.15);
-      --radius: 12px;
+      --rose: #f43f5e;
+      --rose-glow: rgba(244, 63, 94, 0.15);
+      --radius: 14px;
       --radius-sm: 8px;
-      --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     }
-
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
+      font-family: var(--font);
       background: var(--bg);
       color: var(--text);
-      font-family: var(--font);
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -20%;
+      left: 15%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, rgba(6, 182, 212, 0.04) 50%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(80px);
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -15%;
+      right: 10%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.07) 0%, rgba(99, 102, 241, 0.03) 50%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(80px);
     }
 
     /* ── Header ── */
     .header {
-      padding: 16px 24px;
+      padding: 16px 28px;
       border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
       flex-wrap: wrap;
-      backdrop-filter: blur(12px);
-      background: rgba(9, 9, 11, 0.8);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: rgba(7, 9, 14, 0.85);
       position: sticky;
       top: 0;
       z-index: 10;
@@ -61,197 +95,252 @@
     .logo {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
 
     .logo-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      background: linear-gradient(135deg, var(--accent), #a855f7);
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--cyan));
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
+      box-shadow: 0 6px 20px var(--cyan-glow);
+    }
+
+    .logo-icon svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: white;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
     .logo h1 {
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: -0.025em;
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #fff 40%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
-    .logo h1 span {
+    .logo .subtitle {
+      font-size: 0.78rem;
       color: var(--text-muted);
-      font-weight: 400;
-      font-size: 14px;
-      margin-left: 8px;
+      font-weight: 500;
+      margin-top: 1px;
     }
 
-    .connection {
+    .header-right {
       display: flex;
       align-items: center;
       gap: 10px;
     }
-
-    .reconnect-hint {
-      font-size: 11px;
-      color: var(--text-muted);
-      cursor: pointer;
-    }
-
-    .reconnect-hint:hover { color: var(--text-secondary); text-decoration: underline; }
 
     .status-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-size: 12px;
-      font-weight: 500;
-      padding: 5px 10px;
-      border-radius: 20px;
-      background: var(--red-glow);
-      color: var(--red);
-      border: 1px solid rgba(239, 68, 68, 0.2);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 9999px;
+      background: var(--rose-glow);
+      color: var(--rose);
+      border: 1px solid rgba(244, 63, 94, 0.25);
+      letter-spacing: 0.02em;
     }
 
     .status-badge.connected {
-      background: var(--green-glow);
-      color: var(--green);
-      border-color: rgba(34, 197, 94, 0.2);
+      background: var(--emerald-glow);
+      color: var(--emerald);
+      border-color: rgba(16, 185, 129, 0.25);
     }
 
     .status-badge.streaming {
       background: var(--amber-glow);
       color: var(--amber);
-      border-color: rgba(245, 158, 11, 0.2);
+      border-color: rgba(245, 158, 11, 0.25);
     }
 
     .status-dot {
-      width: 6px;
-      height: 6px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: currentColor;
+      box-shadow: 0 0 8px currentColor;
     }
 
     .status-badge.streaming .status-dot {
-      animation: pulse 1.2s ease-in-out infinite;
+      animation: pulse 1.5s ease-in-out infinite;
     }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.5; }
     }
 
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 16px;
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      font-weight: 600;
-      font-family: var(--font);
+    .reconnect-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
       cursor: pointer;
-      border: 1px solid transparent;
-      transition: all 0.15s;
+      transition: color 0.2s;
     }
 
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .btn-primary {
-      background: var(--accent);
-      color: white;
-      border-color: var(--accent);
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      background: var(--accent-hover);
-      border-color: var(--accent-hover);
-    }
-
-    .btn-secondary {
-      background: var(--surface);
-      color: var(--text);
-      border-color: var(--border);
-    }
-
-    .btn-secondary:hover:not(:disabled) {
-      background: var(--surface-2);
-      border-color: var(--border-focus);
-    }
+    .reconnect-hint:hover { color: var(--text-secondary); text-decoration: underline; }
 
     /* ── Layout ── */
     .main {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 20px;
-      padding: 24px;
-      max-width: 1400px;
+      padding: 24px 28px;
+      max-width: 1420px;
       margin: 0 auto;
+      position: relative;
+      z-index: 1;
     }
 
-    @media (max-width: 960px) {
+    .main > .left-col { display: flex; flex-direction: column; gap: 20px; }
+    .main > .right-col { display: flex; flex-direction: column; gap: 20px; }
+
+    @media (max-width: 1000px) {
       .main { grid-template-columns: 1fr; }
     }
 
-    /* ── Panels ── */
-    .panel {
+    /* ── Card ── */
+    .card {
       background: var(--surface);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       overflow: hidden;
+      box-shadow: 0 10px 36px rgba(0, 0, 0, 0.3);
+      transition: border-color 0.25s;
     }
 
-    .panel-header {
-      padding: 14px 18px;
+    .card:hover {
+      border-color: var(--border-hover);
+    }
+
+    .card-header {
+      padding: 14px 20px;
       border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
 
-    .panel-title {
-      font-size: 13px;
-      font-weight: 600;
+    .card-title {
+      font-size: 0.78rem;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
       color: var(--text-secondary);
     }
 
-    .panel-body { padding: 18px; }
+    .card-body { padding: 20px; }
 
     /* ── Textarea ── */
     .text-area {
       width: 100%;
-      min-height: 180px;
-      background: var(--bg);
-      border: 1px solid var(--border);
+      min-height: 140px;
+      background: rgba(8, 12, 22, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       color: var(--text);
       border-radius: var(--radius-sm);
-      padding: 14px;
-      font-size: 14px;
+      padding: 14px 16px;
+      font-size: 0.95rem;
       line-height: 1.6;
       resize: vertical;
       font-family: var(--font);
       outline: none;
-      transition: border-color 0.15s;
+      transition: all 0.25s;
     }
 
     .text-area:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px var(--accent-glow);
+      background: rgba(11, 16, 30, 0.95);
     }
 
     .text-area::placeholder { color: var(--text-muted); }
+
+    .input-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .input-meta label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .char-count {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    /* ── Presets ── */
+    .presets {
+      margin-top: 14px;
+    }
+
+    .presets-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+
+    .presets-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .preset-chip {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 8px;
+      color: #cbd5e1;
+      padding: 7px 12px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .preset-chip:hover {
+      background: rgba(99, 102, 241, 0.1);
+      border-color: var(--accent);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .preset-chip:active { transform: translateY(0); }
 
     /* ── Tag Preview ── */
     .preview {
       margin-top: 12px;
       padding: 12px;
-      background: var(--bg);
-      border: 1px solid var(--border);
+      background: rgba(8, 12, 22, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: var(--radius-sm);
       display: none;
     }
@@ -259,8 +348,8 @@
     .preview.active { display: block; }
 
     .preview-label {
-      font-size: 11px;
-      font-weight: 600;
+      font-size: 0.68rem;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: var(--text-muted);
@@ -279,75 +368,225 @@
       align-items: center;
       padding: 2px 8px;
       border-radius: 4px;
-      font-size: 11px;
+      font-size: 0.68rem;
       font-weight: 600;
       font-family: var(--mono);
       letter-spacing: 0.02em;
     }
 
-    .tag.amt { background: rgba(34, 197, 94, 0.1); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2); }
+    .tag.amt { background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
     .tag.otp { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
     .tag.phone { background: rgba(99, 102, 241, 0.1); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.2); }
     .tag.time { background: rgba(168, 85, 247, 0.1); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.2); }
     .tag.code { background: rgba(251, 146, 60, 0.1); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.2); }
-    .tag.num { background: rgba(34, 197, 94, 0.1); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2); }
+    .tag.amount { background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
 
     .preview-text {
       color: var(--text-secondary);
       font-family: var(--mono);
-      font-size: 12px;
+      font-size: 0.72rem;
       line-height: 1.5;
       word-break: break-word;
       white-space: pre-wrap;
-      max-height: 80px;
+      max-height: 72px;
       overflow-y: auto;
     }
 
-    /* ── Controls ── */
-    .controls {
+    /* ── Controls Row ── */
+    .controls-row {
       display: flex;
       align-items: center;
       gap: 10px;
       margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: var(--font);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+      letter-spacing: 0.01em;
+    }
+
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #818cf8 100%);
+      background-size: 200% auto;
+      color: white;
+      border: none;
+      box-shadow: 0 4px 18px var(--accent-glow);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-position: right center;
+      box-shadow: 0 6px 24px rgba(99, 102, 241, 0.35);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-secondary);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.18);
+      color: #fff;
+    }
+
+    .btn-stop {
+      background: rgba(244, 63, 94, 0.12);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      color: #fb7185;
+      display: none;
+    }
+
+    .btn-stop:hover { background: rgba(244, 63, 94, 0.22); color: #fff; }
+
+    .controls-spacer { flex: 1; }
+
+    .kbd-hint {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .kbd {
+      display: inline-block;
+      padding: 1px 5px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--text-secondary);
     }
 
     /* ── Visualizer ── */
-    .visualizer {
-      height: 48px;
+    .visualizer-card {
+      background: rgba(11, 16, 28, 0.8);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      overflow: hidden;
+    }
+
+    .viz-header {
       display: flex;
       align-items: center;
-      gap: 2px;
-      margin-top: 16px;
-      padding: 0 2px;
+      justify-content: space-between;
+      margin-bottom: 12px;
     }
 
-    .visualizer .bar {
-      flex: 1;
-      background: var(--accent);
-      border-radius: 2px;
-      height: 3px;
-      transition: height 0.06s ease-out;
-      opacity: 0.8;
+    .viz-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
-    /* ── Stats ── */
-    .stats {
-      display: flex;
-      gap: 24px;
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border);
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: rgba(99, 102, 241, 0.12);
+      color: var(--accent-hover);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      transition: all 0.3s;
     }
 
-    .stat-item { font-size: 12px; color: var(--text-muted); }
+    .live-badge.active {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--amber);
+      border-color: rgba(245, 158, 11, 0.3);
+    }
 
-    .stat-value {
+    .live-badge .badge-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .canvas-wrap {
+      width: 100%;
+      height: 64px;
+      background: rgba(5, 8, 16, 0.6);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    canvas#audioCanvas {
+      width: 100%;
+      height: 100%;
       display: block;
-      font-size: 16px;
+    }
+
+    /* ── Metrics HUD ── */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .metric {
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      transition: all 0.2s;
+    }
+
+    .metric.highlight {
+      border-color: rgba(16, 185, 129, 0.35);
+      background: rgba(16, 185, 129, 0.06);
+    }
+
+    .metric-label {
+      font-size: 0.68rem;
       font-weight: 600;
-      color: var(--text);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
+    }
+
+    .metric-value {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #fff;
       font-family: var(--mono);
-      margin-bottom: 2px;
+      letter-spacing: -0.02em;
+    }
+
+    .metric-sub {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin-top: 2px;
     }
 
     /* ── Chunk list ── */
@@ -355,74 +594,83 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      max-height: 540px;
+      max-height: 520px;
       overflow-y: auto;
       padding-right: 4px;
     }
 
     .chunk-list::-webkit-scrollbar { width: 4px; }
     .chunk-list::-webkit-scrollbar-track { background: transparent; }
-    .chunk-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .chunk-list::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 4px; }
 
     .chunk {
       display: flex;
       gap: 12px;
       align-items: flex-start;
-      padding: 12px;
+      padding: 14px;
       border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      background: var(--bg);
-      transition: all 0.2s;
+      border-radius: 10px;
+      background: rgba(8, 12, 22, 0.7);
+      transition: all 0.25s;
+      animation: chunkIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
-    .chunk.pending { opacity: 0.45; }
+    @keyframes chunkIn {
+      0% { opacity: 0; transform: translateY(6px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .chunk.pending { opacity: 0.4; }
 
     .chunk.speaking {
       border-color: var(--amber);
-      background: rgba(245, 158, 11, 0.05);
-      box-shadow: 0 0 0 3px var(--amber-glow);
+      background: rgba(245, 158, 11, 0.06);
+      box-shadow: 0 0 0 3px var(--amber-glow), 0 4px 16px rgba(245, 158, 11, 0.08);
     }
 
     .chunk.done {
       opacity: 1;
-      border-color: rgba(34, 197, 94, 0.3);
+      border-color: rgba(16, 185, 129, 0.25);
     }
 
     .chunk-index {
       flex: none;
-      width: 24px;
-      height: 24px;
+      width: 26px;
+      height: 26px;
       border-radius: 50%;
-      background: var(--surface-2);
+      background: rgba(255, 255, 255, 0.06);
       color: var(--text-muted);
-      font-size: 11px;
+      font-size: 0.72rem;
       font-weight: 700;
       display: flex;
       align-items: center;
       justify-content: center;
+      font-family: var(--mono);
+      transition: all 0.25s;
     }
 
     .chunk.speaking .chunk-index {
       background: var(--amber);
       color: var(--bg);
+      box-shadow: 0 0 12px var(--amber-glow);
     }
 
     .chunk.done .chunk-index {
-      background: var(--green);
+      background: var(--emerald);
       color: var(--bg);
     }
 
     .chunk-content { flex: 1; min-width: 0; }
 
     .chunk-original {
-      font-size: 13px;
+      font-size: 0.85rem;
       line-height: 1.5;
       color: var(--text);
       margin-bottom: 4px;
     }
 
     .chunk-normalized {
-      font-size: 11px;
+      font-size: 0.72rem;
       line-height: 1.4;
       color: var(--text-muted);
       font-family: var(--mono);
@@ -430,28 +678,69 @@
 
     .empty-state {
       color: var(--text-muted);
-      font-size: 13px;
+      font-size: 0.82rem;
       text-align: center;
-      padding: 40px 20px;
+      padding: 48px 24px;
       line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .empty-state svg {
+      opacity: 0.3;
+      margin-bottom: 4px;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 28px;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      border-top: 1px solid var(--border);
+      margin-top: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    @media (max-width: 1000px) {
+      .header { padding: 14px 16px; }
+      .main { padding: 16px; }
+      .metrics { grid-template-columns: repeat(3, 1fr); }
+      .controls-row { flex-direction: column; align-items: stretch; }
+      .controls-row .btn { width: 100%; justify-content: center; }
+      .controls-spacer { display: none; }
+      .kbd-hint { display: none; }
+    }
+
+    @media (max-width: 600px) {
+      .metrics { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
 
 <body>
+  <!-- Header -->
   <div class="header">
     <div class="logo">
       <div class="logo-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24">
           <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
           <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
           <line x1="12" y1="19" x2="12" y2="23"/>
           <line x1="8" y1="23" x2="16" y2="23"/>
         </svg>
       </div>
-      <h1>Movio <span>Indic Voice Streaming</span></h1>
+      <div>
+        <h1>Movio</h1>
+        <div class="subtitle">Live Indic Voice Streaming</div>
+      </div>
     </div>
-    <div class="connection">
+    <div class="header-right">
       <div class="status-badge" id="statusBadge">
         <span class="status-dot"></span>
         <span id="statusLabel">Connecting...</span>
@@ -460,84 +749,146 @@
     </div>
   </div>
 
+  <!-- Main Layout -->
   <div class="main">
-    <!-- Left: Input panel -->
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">Input Text</span>
+    <!-- Left Column -->
+    <div class="left-col">
+      <!-- Input Card -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Text Input</span>
+          <span class="char-count" id="charCount">0 chars</span>
+        </div>
+        <div class="card-body">
+          <textarea class="text-area" id="inputText"
+            placeholder="Type or paste Tamil / English / Tanglish text here...&#10;&#10;Numbers, times, OTPs and codes are auto-detected and expanded for natural speech."></textarea>
+
+          <!-- Presets -->
+          <div class="presets">
+            <div class="presets-label">Quick Presets</div>
+            <div class="presets-grid">
+              <button class="preset-chip" data-text="Your OTP is 483927. Please do not share this with anyone.">OTP Verification</button>
+              <button class="preset-chip" data-text="The total fare is Rs. 1250 for 12.5 km. Payment via UPI.">Fare & Payment</button>
+              <button class="preset-chip" data-text="உங்கள் கேப் 5 நிமிடத்தில் வரும். Driver name Rajesh.">Ride Update</button>
+              <button class="preset-chip" data-text="Vehicle number TN45AB1234 is arriving at Gate 3.">Vehicle Arrival</button>
+              <button class="preset-chip" data-text="Booking ID AB23HH097 confirmed. Pickup at 07:30 am tomorrow.">Booking Confirm</button>
+              <button class="preset-chip" data-text="Unga order dispatch aayiduchu. 30 minutes-la varum.">Tanglish Update</button>
+            </div>
+          </div>
+
+          <!-- Tag Preview -->
+          <div class="preview" id="previewBox">
+            <div class="preview-label">Auto-detected tags</div>
+            <div class="preview-tags" id="previewTags"></div>
+            <div class="preview-text" id="previewText"></div>
+          </div>
+
+          <!-- Controls -->
+          <div class="controls-row">
+            <button class="btn btn-primary" id="synthBtn" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Speak
+            </button>
+            <button class="btn btn-secondary" id="playEntireBtn" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Replay All
+            </button>
+            <button class="btn btn-stop" id="stopBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+              Stop
+            </button>
+            <span class="controls-spacer"></span>
+            <span class="kbd-hint"><span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> to speak</span>
+          </div>
+        </div>
       </div>
-      <div class="panel-body">
-        <textarea class="text-area" id="inputText"
-          placeholder="Type or paste Tamil / English / Tanglish text here...&#10;&#10;Examples:&#10;  Your OTP is 483927. Please do not share this.&#10;  The total fare is 1250 rupees.&#10;  உங்கள் கேப் 07:30 மணிக்கு வரும்.&#10;  Vehicle number TN45AB1234, Booking ID AB23HH097.&#10;&#10;Numbers, times, codes are auto-detected and expanded for speech."></textarea>
 
-        <div class="preview" id="previewBox">
-          <div class="preview-label">Auto-tagged output</div>
-          <div class="preview-tags" id="previewTags"></div>
-          <div class="preview-text" id="previewText"></div>
-        </div>
-
-        <div class="controls">
-          <button class="btn btn-primary" id="synthBtn" disabled>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Speak
-          </button>
-          <button class="btn btn-secondary" id="playEntireBtn" disabled>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Replay All
-          </button>
-        </div>
-
-        <div class="visualizer" id="viz"></div>
-
-        <div class="stats">
-          <div class="stat-item">
-            <span class="stat-value" id="statFirstByte">&mdash;</span>
-            First audio
+      <!-- Visualizer & Metrics -->
+      <div class="visualizer-card">
+        <div class="viz-header">
+          <span class="viz-title">Audio Output</span>
+          <div class="live-badge" id="liveBadge">
+            <span class="badge-dot"></span>
+            <span id="liveBadgeText">Idle</span>
           </div>
-          <div class="stat-item">
-            <span class="stat-value" id="statChunks">&mdash;</span>
-            Chunks
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="audioCanvas"></canvas>
+        </div>
+        <div class="metrics">
+          <div class="metric" id="metricTtfa">
+            <div class="metric-label">First Audio</div>
+            <div class="metric-value" id="valTtfa">&mdash;</div>
+            <div class="metric-sub" id="subTtfa">Time to first byte</div>
           </div>
-          <div class="stat-item">
-            <span class="stat-value" id="statTotal">&mdash;</span>
-            Total time
+          <div class="metric">
+            <div class="metric-label">Chunks</div>
+            <div class="metric-value" id="valChunks">&mdash;</div>
+            <div class="metric-sub">Sentences processed</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Total Time</div>
+            <div class="metric-value" id="valTotal">&mdash;</div>
+            <div class="metric-sub">End-to-end latency</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Right: Chunks panel -->
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">Sentence Chunks</span>
-      </div>
-      <div class="panel-body">
-        <div class="chunk-list" id="chunkList">
-          <div class="empty-state">
-            Chunks will appear here when you speak a paragraph.<br/>
-            Each sentence highlights as audio streams in real-time.
+    <!-- Right Column -->
+    <div class="right-col">
+      <div class="card" style="flex:1; display:flex; flex-direction:column;">
+        <div class="card-header">
+          <span class="card-title">Live Sentence Stream</span>
+          <span class="card-title" id="chunkCountBadge" style="color:var(--text-muted);font-weight:600;"></span>
+        </div>
+        <div class="card-body" style="flex:1; overflow:hidden; display:flex; flex-direction:column;">
+          <div class="chunk-list" id="chunkList">
+            <div class="empty-state" id="emptyState">
+              <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z"/>
+              </svg>
+              Enter text and click Speak to begin.<br/>
+              Each sentence highlights as audio streams in real-time.
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <script>
-    const statusBadge  = document.getElementById('statusBadge');
-    const statusLabel  = document.getElementById('statusLabel');
-    const reconnectHint = document.getElementById('reconnectHint');
-    const synthBtn     = document.getElementById('synthBtn');
-    const playEntireBtn = document.getElementById('playEntireBtn');
-    const inputText    = document.getElementById('inputText');
-    const previewBox   = document.getElementById('previewBox');
-    const previewText  = document.getElementById('previewText');
-    const previewTags  = document.getElementById('previewTags');
-    const chunkList    = document.getElementById('chunkList');
-    const vizEl        = document.getElementById('viz');
-    const statFirstByte = document.getElementById('statFirstByte');
-    const statChunks   = document.getElementById('statChunks');
-    const statTotal    = document.getElementById('statTotal');
+  <!-- Footer -->
+  <div class="footer">
+    Movio &middot; Zero-Shot Indic Voice Streaming
+  </div>
 
+  <script>
+    // ── DOM refs ──
+    const statusBadge   = document.getElementById('statusBadge');
+    const statusLabel   = document.getElementById('statusLabel');
+    const reconnectHint = document.getElementById('reconnectHint');
+    const synthBtn      = document.getElementById('synthBtn');
+    const playEntireBtn = document.getElementById('playEntireBtn');
+    const stopBtn       = document.getElementById('stopBtn');
+    const inputText     = document.getElementById('inputText');
+    const charCount     = document.getElementById('charCount');
+    const previewBox    = document.getElementById('previewBox');
+    const previewText   = document.getElementById('previewText');
+    const previewTags   = document.getElementById('previewTags');
+    const chunkList     = document.getElementById('chunkList');
+    const emptyState    = document.getElementById('emptyState');
+    const chunkCountBadge = document.getElementById('chunkCountBadge');
+    const liveBadge     = document.getElementById('liveBadge');
+    const liveBadgeText = document.getElementById('liveBadgeText');
+    const canvas        = document.getElementById('audioCanvas');
+    const ctxCanvas     = canvas.getContext('2d');
+    const valTtfa       = document.getElementById('valTtfa');
+    const subTtfa       = document.getElementById('subTtfa');
+    const metricTtfa    = document.getElementById('metricTtfa');
+    const valChunks     = document.getElementById('valChunks');
+    const valTotal      = document.getElementById('valTotal');
+
+    // ── Audio state ──
     let ws = null;
     let audioCtx = null;
     let analyser = null;
@@ -553,34 +904,95 @@
     let entireAudioSource = null;
     let entireAudioTimeouts = [];
     let rawChunks = [];
+    let isPlaying = false;
 
-    // Visualizer bars
-    const NUM_BARS = 48;
-    for (let i = 0; i < NUM_BARS; i++) {
-      const b = document.createElement('div');
-      b.className = 'bar';
-      vizEl.appendChild(b);
+    // ── Char counter ──
+    function updateCharCount() {
+      charCount.textContent = inputText.value.length + ' chars';
     }
-    const bars = vizEl.querySelectorAll('.bar');
+    inputText.addEventListener('input', () => { updateCharCount(); updateTagPreview(); });
+    updateCharCount();
 
-    function animateViz() {
-      requestAnimationFrame(animateViz);
-      if (!analyser) return;
-      const data = new Uint8Array(analyser.frequencyBinCount);
-      analyser.getByteFrequencyData(data);
-      const step = Math.floor(data.length / NUM_BARS);
-      for (let i = 0; i < NUM_BARS; i++) {
-        const v = data[i * step] || 0;
-        bars[i].style.height = Math.max(3, (v / 255) * 44) + 'px';
+    // ── Presets ──
+    document.querySelectorAll('.preset-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        inputText.value = btn.dataset.text;
+        updateCharCount();
+        updateTagPreview();
+        inputText.focus();
+      });
+    });
+
+    // ── Canvas Visualizer ──
+    function setupVisualizer() {
+      function resize() {
+        canvas.width = canvas.parentElement.clientWidth * window.devicePixelRatio;
+        canvas.height = canvas.parentElement.clientHeight * window.devicePixelRatio;
       }
-    }
-    animateViz();
+      window.addEventListener('resize', resize);
+      resize();
 
+      let phase = 0;
+      function render() {
+        requestAnimationFrame(render);
+        const w = canvas.width;
+        const h = canvas.height;
+        ctxCanvas.clearRect(0, 0, w, h);
+
+        if (analyser && isPlaying) {
+          const bufferLength = analyser.frequencyBinCount;
+          const dataArray = new Uint8Array(bufferLength);
+          analyser.getByteFrequencyData(dataArray);
+          const barWidth = (w / bufferLength) * 2.2;
+          let x = 0;
+          for (let i = 0; i < bufferLength; i++) {
+            const barHeight = (dataArray[i] / 255) * h * 0.85;
+            const grad = ctxCanvas.createLinearGradient(0, h, 0, h - barHeight);
+            grad.addColorStop(0, 'rgba(99, 102, 241, 0.15)');
+            grad.addColorStop(0.5, 'rgba(99, 102, 241, 0.6)');
+            grad.addColorStop(1, 'rgba(129, 140, 248, 0.9)');
+            ctxCanvas.fillStyle = grad;
+            ctxCanvas.fillRect(x, h - barHeight, barWidth - 2, barHeight);
+            x += barWidth;
+          }
+        } else {
+          phase += 0.03;
+          ctxCanvas.beginPath();
+          ctxCanvas.lineWidth = 2 * window.devicePixelRatio;
+          const grad = ctxCanvas.createLinearGradient(0, 0, w, 0);
+          grad.addColorStop(0, 'rgba(99, 102, 241, 0.08)');
+          grad.addColorStop(0.5, 'rgba(99, 102, 241, 0.45)');
+          grad.addColorStop(1, 'rgba(99, 102, 241, 0.08)');
+          ctxCanvas.strokeStyle = grad;
+          const mid = h / 2;
+          ctxCanvas.moveTo(0, mid);
+          for (let x = 0; x < w; x += 4) {
+            const y = mid + Math.sin(x * 0.012 + phase) * 5;
+            ctxCanvas.lineTo(x, y);
+          }
+          ctxCanvas.stroke();
+        }
+      }
+      render();
+    }
+    setupVisualizer();
+
+    // ── Status ──
     function setStatus(state) {
       statusBadge.className = 'status-badge' + (state !== 'disconnected' ? ' ' + state : '');
-      statusLabel.textContent = state === 'connected' ? 'Connected' : state === 'streaming' ? 'Streaming' : 'Disconnected';
+      statusLabel.textContent = state === 'connected' ? 'Ready' : state === 'streaming' ? 'Streaming' : 'Disconnected';
       synthBtn.disabled = state === 'disconnected';
       reconnectHint.style.display = state === 'disconnected' ? 'inline' : 'none';
+
+      if (state === 'streaming') {
+        liveBadge.classList.add('active');
+        liveBadgeText.textContent = 'Streaming';
+        stopBtn.style.display = 'inline-flex';
+      } else {
+        liveBadge.classList.remove('active');
+        liveBadgeText.textContent = 'Idle';
+        stopBtn.style.display = 'none';
+      }
     }
 
     function ensureAudioContext() {
@@ -588,6 +1000,7 @@
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         analyser = audioCtx.createAnalyser();
         analyser.fftSize = 128;
+        analyser.smoothingTimeConstant = 0.8;
         analyser.connect(audioCtx.destination);
         nextBoundary = audioCtx.currentTime;
       } else if (audioCtx.state === 'suspended') {
@@ -595,7 +1008,7 @@
       }
     }
 
-    // ── Auto-tagger (mirrors backend tag format) ──
+    // ── Auto-tagger ──
     function autoTagText(text) {
       if (!text || !text.trim()) return '';
       const placeholders = [];
@@ -692,8 +1105,6 @@
       }
     }
 
-    inputText.addEventListener('input', updateTagPreview);
-
     // ── Audio trim ──
     function trimAudioSilence(float32, sr = 44100, threshold = 0.0008, padMs = 80) {
       const padSamples = Math.floor((padMs / 1000) * sr);
@@ -712,7 +1123,7 @@
       return trimmed;
     }
 
-    // ── WebSocket (auto-connect to same origin) ──
+    // ── WebSocket ──
     let reconnectTimer = null;
 
     function getWsUrl() {
@@ -722,9 +1133,8 @@
 
     function connect() {
       if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
-      const url = getWsUrl();
       ensureAudioContext();
-      ws = new WebSocket(url);
+      ws = new WebSocket(getWsUrl());
       ws.binaryType = 'arraybuffer';
       ws.onopen = () => setStatus('connected');
       ws.onclose = () => { setStatus('disconnected'); scheduleReconnect(); };
@@ -746,7 +1156,8 @@
       } else if (msg.type === 'chunks') {
         rawChunks = msg.raw_chunks || msg.chunks;
         renderChunks(msg.raw_chunks || msg.chunks, msg.chunks);
-        statChunks.textContent = msg.chunks.length;
+        valChunks.textContent = msg.chunks.length;
+        chunkCountBadge.textContent = msg.chunks.length + ' chunks';
         storedSentences = new Array(msg.chunks.length).fill(null);
         playEntireBtn.disabled = true;
         setStatus('streaming');
@@ -756,7 +1167,7 @@
         scheduleSentence(msg.index);
       } else if (msg.type === 'done') {
         setStatus('connected');
-        statTotal.textContent = ((performance.now() - synthStart) / 1000).toFixed(2) + 's';
+        valTotal.textContent = ((performance.now() - synthStart) / 1000).toFixed(2) + 's';
         if (storedSentences.some(s => s && s.length > 0)) playEntireBtn.disabled = false;
       }
     }
@@ -764,7 +1175,10 @@
     function handleAudioFrame(buf) {
       if (!firstByteRecorded) {
         firstByteRecorded = true;
-        statFirstByte.textContent = ((performance.now() - synthStart) / 1000).toFixed(2) + 's';
+        const ttfa = ((performance.now() - synthStart) / 1000).toFixed(2) + 's';
+        valTtfa.textContent = ttfa;
+        subTtfa.textContent = 'Confirmed';
+        metricTtfa.classList.add('highlight');
       }
       const int16 = new Int16Array(buf);
       const float32 = new Float32Array(int16.length);
@@ -804,10 +1218,14 @@
       const startAt = Math.max(lastGainNode ? nextBoundary + 0.10 : audioCtx.currentTime, audioCtx.currentTime);
       gainNode.gain.setValueAtTime(1, startAt);
       source.start(startAt);
+      isPlaying = true;
 
       const delay = Math.max(0, (startAt - audioCtx.currentTime) * 1000);
       scheduledTimeouts.push(setTimeout(() => markChunk(index, 'speaking'), delay));
-      source.onended = () => markChunk(index, 'done');
+      source.onended = () => {
+        markChunk(index, 'done');
+        isPlaying = false;
+      };
 
       nextBoundary = startAt + buffer.duration;
       lastGainNode = gainNode;
@@ -834,16 +1252,19 @@
       const el = document.getElementById('chunk-' + index);
       if (!el) return;
       el.className = 'chunk ' + state;
+      if (state === 'speaking') el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     function escapeHtml(s) {
       return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
+    // ── Entire playback ──
     function stopEntirePlayback() {
       if (entireAudioSource) { try { entireAudioSource.stop(); } catch(e) {} entireAudioSource = null; }
       entireAudioTimeouts.forEach(t => clearTimeout(t));
       entireAudioTimeouts = [];
+      isPlaying = false;
     }
 
     function playEntireAudio() {
@@ -880,6 +1301,7 @@
       source.buffer = buffer;
       source.connect(analyser);
       entireAudioSource = source;
+      isPlaying = true;
 
       for (let i = 0; i < storedSentences.length; i++) markChunk(i, 'pending');
       source.start(audioCtx.currentTime);
@@ -893,12 +1315,14 @@
 
       source.onended = () => {
         entireAudioSource = null;
+        isPlaying = false;
         for (let i = 0; i < storedSentences.length; i++) markChunk(i, 'done');
       };
     }
 
+    // ── Synthesize ──
     function synthesize() {
-      if (!ws || ws.readyState !== WebSocket.OPEN) { alert('Not connected.'); return; }
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
       const raw = inputText.value.trim();
       if (!raw) return;
 
@@ -914,21 +1338,42 @@
       currentChunkPieces = [];
       firstByteRecorded = false;
       synthStart = performance.now();
-      statFirstByte.textContent = '—';
-      statTotal.textContent = '—';
+      valTtfa.textContent = '—';
+      valTotal.textContent = '—';
+      valChunks.textContent = '—';
+      chunkCountBadge.textContent = '';
+      subTtfa.textContent = 'Time to first byte';
+      metricTtfa.classList.remove('highlight');
 
       const processed = autoTagText(raw);
       updateTagPreview();
       ws.send(JSON.stringify({ type: 'synthesize', text: processed }));
     }
 
+    // ── Stop streaming ──
+    function stopStreaming() {
+      stopEntirePlayback();
+      scheduledTimeouts.forEach(t => clearTimeout(t));
+      scheduledTimeouts = [];
+      setStatus('connected');
+    }
+
+    // ── Event listeners ──
     synthBtn.addEventListener('click', synthesize);
+    stopBtn.addEventListener('click', stopStreaming);
     playEntireBtn.addEventListener('click', () => {
       if (entireAudioSource) {
         stopEntirePlayback();
         for (let i = 0; i < storedSentences.length; i++) markChunk(i, 'done');
       } else {
         playEntireAudio();
+      }
+    });
+
+    inputText.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.ctrlKey) {
+        e.preventDefault();
+        synthesize();
       }
     });
 
