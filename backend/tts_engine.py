@@ -1,8 +1,13 @@
+import os
 import time
 import queue
 import numpy as np
 import torch
 from threading import Thread
+
+os.environ.setdefault("USE_TF", "0")
+os.environ.setdefault("USE_FLAX", "0")
+
 from transformers import AutoTokenizer
 from transformers.generation.streamers import BaseStreamer
 from transformers.modeling_outputs import BaseModelOutput
