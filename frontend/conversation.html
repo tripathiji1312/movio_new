@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Movio — Phone Call Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07090e;
+      --surface: rgba(15, 23, 42, 0.7);
+      --surface-2: rgba(30, 41, 59, 0.55);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-hover: rgba(255, 255, 255, 0.14);
+      --text: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --accent-glow: rgba(99, 102, 241, 0.2);
+      --cyan: #06b6d4;
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.2);
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -20%;
+      left: 15%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, rgba(6, 182, 212, 0.04) 50%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(80px);
+    }
+
+    /* ── Header ── */
+    .header {
+      width: 100%;
+      padding: 16px 28px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(16px);
+      background: rgba(7, 9, 14, 0.85);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--cyan));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 20px rgba(6, 182, 212, 0.25);
+    }
+
+    .logo-icon svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: white;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .logo h1 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #fff 40%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo .subtitle {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .back-link {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover { color: var(--text-secondary); }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 9999px;
+      background: rgba(244, 63, 94, 0.15);
+      color: var(--rose);
+      border: 1px solid rgba(244, 63, 94, 0.25);
+    }
+
+    .status-badge.connected {
+      background: var(--emerald-glow);
+      color: var(--emerald);
+      border-color: rgba(16, 185, 129, 0.25);
+    }
+
+    .status-badge.speaking {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--amber);
+      border-color: rgba(245, 158, 11, 0.25);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    .status-badge.speaking .status-dot {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.5; }
+    }
+
+    /* ── Phone Container ── */
+    .phone {
+      width: 100%;
+      max-width: 540px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Call Bar ── */
+    .call-bar {
+      padding: 16px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .call-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--cyan));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .call-info { flex: 1; }
+
+    .call-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .call-status {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .call-status.active { color: var(--emerald); }
+
+    .call-timer {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    /* ── Chat Area ── */
+    .chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 320px;
+      max-height: calc(100vh - 360px);
+    }
+
+    .chat::-webkit-scrollbar { width: 4px; }
+    .chat::-webkit-scrollbar-track { background: transparent; }
+    .chat::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 4px; }
+
+    .msg {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 0.88rem;
+      line-height: 1.55;
+      animation: msgIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes msgIn {
+      0% { opacity: 0; transform: translateY(8px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg.ai {
+      align-self: flex-start;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg.ai.speaking {
+      border-color: rgba(245, 158, 11, 0.3);
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.08);
+    }
+
+    .msg.ai.interrupted {
+      opacity: 0.5;
+      border-color: rgba(244, 63, 94, 0.2);
+    }
+
+    .msg.ai.interrupted::after {
+      content: ' (interrupted)';
+      font-size: 0.7rem;
+      color: var(--rose);
+      font-style: italic;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(99, 102, 241, 0.15));
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .empty-chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-align: center;
+      gap: 8px;
+      padding: 40px 20px;
+    }
+
+    .empty-chat svg { opacity: 0.3; }
+
+    /* ── Input Area ── */
+    .input-area {
+      padding: 16px 20px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .preset {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 8px;
+      color: #cbd5e1;
+      padding: 7px 12px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .preset:hover {
+      background: rgba(99, 102, 241, 0.1);
+      border-color: var(--accent);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .preset:active { transform: translateY(0); }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .input-field {
+      flex: 1;
+      background: rgba(8, 12, 22, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.88rem;
+      font-family: var(--font);
+      outline: none;
+      transition: all 0.25s;
+    }
+
+    .input-field:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .input-field::placeholder { color: var(--text-muted); }
+
+    .send-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: var(--font);
+      cursor: pointer;
+      border: none;
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #818cf8 100%);
+      background-size: 200% auto;
+      color: white;
+      box-shadow: 0 4px 18px var(--accent-glow);
+      transition: all 0.2s;
+    }
+
+    .send-btn:hover:not(:disabled) {
+      background-position: right center;
+      box-shadow: 0 6px 24px rgba(99, 102, 241, 0.35);
+      transform: translateY(-1px);
+    }
+
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .hint {
+      margin-top: 10px;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .hint .kbd {
+      display: inline-block;
+      padding: 1px 5px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    /* ── Metrics Strip ── */
+    .metrics-strip {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      padding: 10px 20px;
+      border-top: 1px solid var(--border);
+      background: rgba(7, 9, 14, 0.6);
+    }
+
+    .metric-item {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    .metric-item span { color: var(--text-secondary); font-weight: 600; }
+
+    @media (max-width: 600px) {
+      .phone { max-width: 100%; }
+      .chat { max-height: calc(100vh - 400px); }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Movio</h1>
+        <div class="subtitle">Phone Call Demo &mdash; Interrupt AI mid-speech</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <a class="back-link" href="/">&larr; Main UI</a>
+      <div class="status-badge" id="statusBadge">
+        <span class="status-dot"></span>
+        <span id="statusLabel">Connecting...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="phone">
+    <!-- Call Bar -->
+    <div class="call-bar">
+      <div class="call-avatar">AI</div>
+      <div class="call-info">
+        <div class="call-name">Movio Voice Assistant</div>
+        <div class="call-status" id="callStatus">Waiting...</div>
+      </div>
+      <div class="call-timer" id="callTimer">0:00</div>
+    </div>
+
+    <!-- Chat Messages -->
+    <div class="chat" id="chat">
+      <div class="empty-chat" id="emptyChat">
+        <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
+        </svg>
+        Click a preset or type a message to make the AI speak.<br/>
+        Send another message while it's speaking to interrupt!
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="input-area">
+      <div class="presets">
+        <button class="preset" data-text="Hello! Welcome to Movio cab service. How can I help you today?">Greeting</button>
+        <button class="preset" data-text="Your cab is 5 minutes away. The driver's name is Rajesh and the vehicle number is TN45AB1234.">Ride ETA</button>
+        <button class="preset" data-text="The total fare for your trip is Rs. 350. You can pay via UPI or cash.">Fare Info</button>
+        <button class="preset" data-text="I'm sorry, but there's a slight delay. Your cab will now arrive in 12 minutes due to traffic.">Delay Notice</button>
+        <button class="preset" data-text="Your cab has arrived! Please look for a white Swift Dzire at Gate 3.">Arrival</button>
+        <button class="preset" data-text="Vanakkam! Movio cab service-kku varavetrkirom. Ungalukku eppadi udhava mudiyum?">Tamil</button>
+      </div>
+      <div class="input-row">
+        <input class="input-field" id="inputField" type="text" placeholder="Type something for the AI to say..." />
+        <button class="send-btn" id="sendBtn" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Send
+        </button>
+      </div>
+      <div class="hint">
+        <span class="kbd">Enter</span> to send &middot; Sending while AI speaks = instant interrupt
+      </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics-strip">
+      <div class="metric-item">Gen: <span id="metricGenId">--</span></div>
+      <div class="metric-item">TTFA: <span id="metricTtfa">--</span></div>
+      <div class="metric-item">Chunks: <span id="metricChunks">--</span></div>
+      <div class="metric-item">Status: <span id="metricStatus">idle</span></div>
+    </div>
+  </div>
+
+  <script>
+    const chat = document.getElementById('chat');
+    const emptyChat = document.getElementById('emptyChat');
+    const inputField = document.getElementById('inputField');
+    const sendBtn = document.getElementById('sendBtn');
+    const statusBadge = document.getElementById('statusBadge');
+    const statusLabel = document.getElementById('statusLabel');
+    const callStatus = document.getElementById('callStatus');
+    const callTimer = document.getElementById('callTimer');
+    const metricGenId = document.getElementById('metricGenId');
+    const metricTtfa = document.getElementById('metricTtfa');
+    const metricChunks = document.getElementById('metricChunks');
+    const metricStatus = document.getElementById('metricStatus');
+
+    let ws = null;
+    let audioCtx = null;
+    let sampleRate = 44100;
+
+    let currentGenId = 0;
+    let nextPlayTime = 0;
+    let activeGainNode = null;
+    let activeSources = [];
+    let isSpeaking = false;
+
+    let genStartTime = 0;
+    let firstByteReceived = false;
+    let timerInterval = null;
+    let timerStart = null;
+
+    // ── Audio Context ──
+    function ensureAudioCtx() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        nextPlayTime = audioCtx.currentTime;
+      } else if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    // ── Timer ──
+    function startTimer() {
+      if (timerStart) return;
+      timerStart = performance.now();
+      timerInterval = setInterval(() => {
+        const elapsed = (performance.now() - timerStart) / 1000;
+        const m = Math.floor(elapsed / 60);
+        const s = Math.floor(elapsed % 60);
+        callTimer.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+      }, 1000);
+    }
+
+    // ── Status ──
+    function setConnectionStatus(state) {
+      statusBadge.className = 'status-badge' + (state !== 'disconnected' ? ' ' + state : '');
+      statusLabel.textContent = state === 'connected' ? 'Ready'
+        : state === 'speaking' ? 'Speaking' : 'Disconnected';
+      sendBtn.disabled = state === 'disconnected';
+    }
+
+    function setSpeaking(speaking) {
+      isSpeaking = speaking;
+      if (speaking) {
+        setConnectionStatus('speaking');
+        callStatus.textContent = 'Speaking...';
+        callStatus.classList.add('active');
+      } else {
+        setConnectionStatus('connected');
+        callStatus.textContent = 'On call';
+        callStatus.classList.remove('active');
+      }
+    }
+
+    // ── Chat Messages ──
+    let currentAiMsgEl = null;
+    let currentAiGenId = 0;
+
+    function addMessage(role, text, genId) {
+      if (emptyChat.style.display !== 'none') emptyChat.style.display = 'none';
+
+      const el = document.createElement('div');
+      el.className = 'msg ' + role;
+      el.dataset.genId = genId || 0;
+
+      const label = document.createElement('div');
+      label.className = 'msg-label';
+      label.textContent = role === 'ai' ? 'AI Assistant' : 'You';
+      el.appendChild(label);
+
+      const body = document.createElement('div');
+      body.textContent = text;
+      el.appendChild(body);
+
+      chat.appendChild(el);
+      chat.scrollTop = chat.scrollHeight;
+
+      if (role === 'ai') {
+        el.classList.add('speaking');
+        currentAiMsgEl = el;
+        currentAiGenId = genId;
+      }
+
+      return el;
+    }
+
+    function markAiDone(genId, aborted) {
+      const el = chat.querySelector(`.msg.ai[data-gen-id="${genId}"]`);
+      if (!el) return;
+      el.classList.remove('speaking');
+      if (aborted) el.classList.add('interrupted');
+    }
+
+    // ── Audio Playback ──
+    function fadeOutCurrent() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      if (activeGainNode) {
+        activeGainNode.gain.cancelScheduledValues(now);
+        activeGainNode.gain.setValueAtTime(activeGainNode.gain.value, now);
+        activeGainNode.gain.linearRampToValueAtTime(0, now + 0.05);
+      }
+      for (const src of activeSources) {
+        try { src.stop(now + 0.06); } catch (e) {}
+      }
+      activeSources = [];
+      activeGainNode = null;
+      nextPlayTime = now + 0.06;
+    }
+
+    function scheduleAudio(pcmInt16) {
+      if (!audioCtx || pcmInt16.length === 0) return;
+
+      const float32 = new Float32Array(pcmInt16.length);
+      for (let i = 0; i < pcmInt16.length; i++) float32[i] = pcmInt16[i] / 32768;
+
+      const buffer = audioCtx.createBuffer(1, float32.length, sampleRate);
+      buffer.getChannelData(0).set(float32);
+
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+
+      const gain = audioCtx.createGain();
+      source.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      const startAt = Math.max(nextPlayTime, audioCtx.currentTime);
+      gain.gain.setValueAtTime(1.0, startAt);
+      source.start(startAt);
+
+      nextPlayTime = startAt + buffer.duration;
+      activeGainNode = gain;
+      activeSources.push(source);
+
+      source.onended = () => {
+        const idx = activeSources.indexOf(source);
+        if (idx !== -1) activeSources.splice(idx, 1);
+      };
+    }
+
+    // ── WebSocket ──
+    let reconnectTimer = null;
+
+    function connect() {
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(proto + '//' + location.host + '/ws/conversation');
+      ws.binaryType = 'arraybuffer';
+
+      ws.onopen = () => {
+        setConnectionStatus('connected');
+        callStatus.textContent = 'Connected';
+        startTimer();
+      };
+
+      ws.onclose = () => {
+        setConnectionStatus('disconnected');
+        callStatus.textContent = 'Disconnected';
+        reconnectTimer = setTimeout(connect, 3000);
+      };
+
+      ws.onerror = () => {};
+
+      ws.onmessage = (event) => {
+        if (typeof event.data === 'string') {
+          handleControlMsg(JSON.parse(event.data));
+        } else {
+          handleBinaryFrame(event.data);
+        }
+      };
+    }
+
+    function handleControlMsg(msg) {
+      if (msg.type === 'config') {
+        sampleRate = msg.sample_rate;
+
+      } else if (msg.type === 'gen_start') {
+        currentGenId = msg.gen_id;
+        firstByteReceived = false;
+        genStartTime = performance.now();
+        metricGenId.textContent = msg.gen_id;
+        metricChunks.textContent = msg.num_chunks || '--';
+        metricTtfa.textContent = '...';
+        metricStatus.textContent = 'generating';
+        setSpeaking(true);
+        addMessage('ai', msg.text, msg.gen_id);
+
+      } else if (msg.type === 'gen_end') {
+        metricStatus.textContent = msg.aborted ? 'interrupted' : 'done';
+        markAiDone(msg.gen_id, msg.aborted);
+        if (msg.gen_id === currentGenId) {
+          setSpeaking(false);
+        }
+      }
+    }
+
+    function handleBinaryFrame(data) {
+      const view = new DataView(data);
+      const genId = view.getUint32(0);
+
+      if (genId !== currentGenId) return;
+
+      if (!firstByteReceived) {
+        firstByteReceived = true;
+        const ttfa = ((performance.now() - genStartTime) / 1000).toFixed(2);
+        metricTtfa.textContent = ttfa + 's';
+      }
+
+      const pcm = new Int16Array(data, 4);
+      scheduleAudio(pcm);
+    }
+
+    // ── Send / Interrupt ──
+    function sendText(text) {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      text = text.trim();
+      if (!text) return;
+
+      ensureAudioCtx();
+
+      const isInterrupt = isSpeaking;
+
+      if (isInterrupt) {
+        fadeOutCurrent();
+        markAiDone(currentAiGenId, true);
+      }
+
+      addMessage('user', isInterrupt ? text + ' [interrupt]' : text, 0);
+
+      ws.send(JSON.stringify({
+        type: isInterrupt ? 'interrupt' : 'speak',
+        text: text,
+      }));
+
+      inputField.value = '';
+    }
+
+    // ── Event Listeners ──
+    sendBtn.addEventListener('click', () => sendText(inputField.value));
+
+    inputField.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendText(inputField.value);
+      }
+    });
+
+    document.querySelectorAll('.preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        sendText(btn.dataset.text);
+      });
+    });
+
+    // ── Init ──
+    setConnectionStatus('disconnected');
+    connect();
+  </script>
+</body>
+</html>

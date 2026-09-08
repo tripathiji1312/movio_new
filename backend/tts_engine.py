@@ -3,7 +3,7 @@ import time
 import queue
 import numpy as np
 import torch
-from threading import Thread
+from threading import Thread, Event
 
 os.environ.setdefault("USE_TF", "0")
 os.environ.setdefault("USE_FLAX", "0")
@@ -17,6 +17,21 @@ from .config import (
     DEVICE, TORCH_DTYPE, MODEL_ID, VOICE_DESCRIPTION, CHARS_PER_SEC,
     GENERATION_SEED, TEMPERATURE,
 )
+
+
+class AbortCriteria:
+    def __init__(self):
+        self._event = Event()
+
+    def __call__(self, input_ids, scores, **kwargs):
+        return self._event.is_set()
+
+    def abort(self):
+        self._event.set()
+
+    @property
+    def is_aborted(self):
+        return self._event.is_set()
 
 
 class ParlerTTSStreamerLocal(BaseStreamer):
@@ -160,7 +175,8 @@ class TTSEngine:
             self._description_cache[description_text] = hidden
         return self._description_cache[description_text]
 
-    def stream_generate(self, prompt_text: str, description_text: str, play_steps_in_s: float = 0.5):
+    def stream_generate(self, prompt_text: str, description_text: str,
+                        play_steps_in_s: float = 0.5, abort_criteria=None):
         frame_rate = self.model.audio_encoder.config.frame_rate
         play_steps = max(1, int(frame_rate * play_steps_in_s))
 
@@ -190,6 +206,9 @@ class TTSEngine:
             max_new_tokens=estimated_max_tokens,
         )
 
+        if abort_criteria is not None:
+            gen_kwargs["stopping_criteria"] = [abort_criteria]
+
         def _run(**kwargs):
             torch.manual_seed(GENERATION_SEED)
             if DEVICE.startswith("cuda"):
@@ -202,9 +221,11 @@ class TTSEngine:
         thread.start()
 
         for chunk in streamer:
+            if abort_criteria and abort_criteria.is_aborted:
+                break
             yield chunk, time.time() - start
 
-        thread.join()
+        thread.join(timeout=5.0)
 
 
 engine = TTSEngine()

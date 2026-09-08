@@ -13,7 +13,7 @@ from collections import OrderedDict
 from .config import VOICE_DESCRIPTION, PLAY_STEPS_IN_S, CACHE_MAX_ENTRIES, TEMPERATURE
 from .normalizer import normalize_text
 from .chunker import split_into_sentences
-from .tts_engine import engine
+from .tts_engine import engine, AbortCriteria
 
 app = FastAPI()
 
@@ -123,14 +123,19 @@ def postprocess_full_audio(samples: np.ndarray, sample_rate: int) -> np.ndarray:
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
-async def async_stream_generate(prompt_text, description_text, play_steps_in_s=PLAY_STEPS_IN_S):
+async def async_stream_generate(prompt_text, description_text,
+                                 play_steps_in_s=PLAY_STEPS_IN_S,
+                                 abort_criteria=None):
     loop = asyncio.get_event_loop()
     q: asyncio.Queue = asyncio.Queue()
     STOP = object()
 
     def producer():
         try:
-            for audio_piece, t in engine.stream_generate(prompt_text, description_text, play_steps_in_s):
+            for audio_piece, t in engine.stream_generate(
+                prompt_text, description_text, play_steps_in_s,
+                abort_criteria=abort_criteria,
+            ):
                 loop.call_soon_threadsafe(q.put_nowait, (audio_piece, t))
         finally:
             loop.call_soon_threadsafe(q.put_nowait, STOP)
@@ -192,6 +197,85 @@ async def ws_synthesize(websocket: WebSocket):
 @app.get("/")
 async def serve_index():
     return FileResponse(FRONTEND_DIR / "index.html")
+
+
+@app.get("/conversation")
+async def serve_conversation():
+    return FileResponse(FRONTEND_DIR / "conversation.html")
+
+
+@app.websocket("/ws/conversation")
+async def ws_conversation(websocket: WebSocket):
+    await websocket.accept()
+    await websocket.send_json({"type": "config", "sample_rate": engine.sample_rate})
+
+    gen_id = 0
+    current_abort: AbortCriteria | None = None
+    gen_task: asyncio.Task | None = None
+
+    async def run_generation(text: str, gid: int, abort: AbortCriteria):
+        try:
+            chunks = split_into_sentences(text)
+            chunks = [normalize_text(c) for c in chunks]
+
+            await websocket.send_json({
+                "type": "gen_start", "gen_id": gid,
+                "text": text, "num_chunks": len(chunks),
+            })
+
+            for chunk_text in chunks:
+                if abort.is_aborted:
+                    break
+
+                async for audio_piece, t in async_stream_generate(
+                    chunk_text, VOICE_DESCRIPTION,
+                    abort_criteria=abort,
+                ):
+                    if abort.is_aborted:
+                        break
+                    clipped = np.clip(audio_piece, -1.0, 1.0)
+                    pcm = (clipped * 32767).astype(np.int16).tobytes()
+                    header = gid.to_bytes(4, "big")
+                    await websocket.send_bytes(header + pcm)
+
+            await websocket.send_json({
+                "type": "gen_end", "gen_id": gid,
+                "aborted": abort.is_aborted,
+            })
+        except WebSocketDisconnect:
+            pass
+        except Exception as e:
+            print(f"Generation {gid} error: {e}")
+
+    try:
+        while True:
+            msg = await websocket.receive_json()
+
+            if msg.get("type") not in ("speak", "interrupt"):
+                continue
+
+            text = msg.get("text", "").strip()
+            if not text:
+                continue
+
+            if current_abort is not None:
+                current_abort.abort()
+            if gen_task is not None and not gen_task.done():
+                try:
+                    await asyncio.wait_for(asyncio.shield(gen_task), timeout=2.0)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    gen_task.cancel()
+
+            gen_id += 1
+            current_abort = AbortCriteria()
+            gen_task = asyncio.create_task(
+                run_generation(text, gen_id, current_abort)
+            )
+
+    except WebSocketDisconnect:
+        if current_abort:
+            current_abort.abort()
+        print("Conversation client disconnected")
 
 
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
