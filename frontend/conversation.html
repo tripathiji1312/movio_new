@@ -542,6 +542,7 @@
 
     let currentGenId = 0;
     let nextPlayTime = 0;
+    let audioEndTime = 0;   // audioCtx time when the last scheduled buffer ends
     let masterGain = null;
     let activeSources = [];
     let needsFadeIn = false;
@@ -665,6 +666,7 @@
         masterGain.gain.setValueAtTime(0, now + 0.06);
       }
       nextPlayTime = now + 0.06;
+      audioEndTime = now + 0.06;
       needsFadeIn = true;
     }
 
@@ -703,6 +705,7 @@
 
       source.start(startAt);
       nextPlayTime = startAt + buffer.duration;
+      audioEndTime = nextPlayTime;   // track the real end of scheduled audio
       activeSources.push(source);
 
       source.onended = () => {
@@ -768,7 +771,7 @@
         }
         // Give a 150 ms scheduling lookahead from now so the first chunk
         // always arrives before its start time.
-        if (audioCtx) nextPlayTime = audioCtx.currentTime + 0.15;
+        if (audioCtx) { nextPlayTime = audioCtx.currentTime + 0.15; audioEndTime = 0; }
         setSpeaking(true);
         addMessage('ai', msg.text, msg.gen_id);
 
@@ -797,6 +800,60 @@
       scheduleAudio(pcm);
     }
 
+    // ── Auto-tagger (same logic as main UI) ──
+    function autoTagText(text) {
+      if (!text || !text.trim()) return '';
+      const placeholders = [];
+      function saveTag(val) { placeholders.push(val); return '___AT_' + (placeholders.length - 1) + '___'; }
+      text = text.replace(/\{\{([A-Za-z]+):([^}]+)\}\}/g, (m, tag, val) =>
+        saveTag('{{' + tag.toUpperCase() + ':' + val.trim() + '}}'));
+      const durationRe = /\b(\d+)(?::00)?\s*(minutes?|mins?|sec(?:onds?)?|hrs?|hours?|நிமிடங்கள்?|நிமிடம்|வினாடிகள்?|மணி)(?:-ல்)?\b/gi;
+      text = text.replace(durationRe, (m, num, unit) =>
+        saveTag('{{AMOUNT:' + num + '}}') + ' ' + unit + (m.endsWith('-ல்') ? '-ல்' : ''));
+      text = text.replace(/\b(0?[0-9]|1[0-9]|2[0-3]):([0-5][0-9])(?:\s*(am|pm))?\b(?!\s*(?:min|sec|hour|நிமி))/gi, (m, hStr, mm, ampm) => {
+        let hh = parseInt(hStr, 10);
+        if (ampm) { ampm = ampm.toLowerCase(); if (ampm === 'pm' && hh < 12) hh += 12; if (ampm === 'am' && hh === 12) hh = 0; }
+        return saveTag('{{TIME:' + (hh < 10 ? '0' + hh : '' + hh) + ':' + mm + '}}');
+      });
+      text = text.replace(/\b([A-Z])\.\s+([A-Z][a-z]+)\b/g, '$1 $2');
+      text = text.replace(/\b(Dr|Mr|Mrs|Ms|Prof|St|No|Rd|Ave)\.\s+/gi, '$1 ');
+      const SC = "AN|AP|AR|AS|BR|CG|CH|DD|DL|DN|GA|GJ|HP|HR|JH|JK|KA|KL|LA|LD|MH|ML|MN|MP|MZ|NL|OD|OR|PB|PY|RJ|SK|TN|TR|TS|UA|UK|UP|WB";
+      const carRe = new RegExp(`\\b(${SC})[ -]?([0-9]{1,2})[ -]?([A-Za-z]{1,3})?[ -]?([0-9]{1,4})\\b`, 'gi');
+      const bhRe = /\b([0-9]{2})[ -]?(BH)[ -]?([0-9]{4})[ -]?([A-Za-z]{1,2})\b/gi;
+      text = text.replace(carRe, m => saveTag('{{CODE:' + m.replace(/[\s-]+/g, '').toUpperCase() + '}}'));
+      text = text.replace(bhRe, m => saveTag('{{CODE:' + m.replace(/[\s-]+/g, '').toUpperCase() + '}}'));
+      const codePreRe = /\b((?:booking\s*id|order\s*id|pnr|ref(?:erence)?\s*id)\s*(?:is|:|[-])?\s*)([A-Za-z0-9]{3,14})\b/gi;
+      text = text.replace(codePreRe, (m, pre, code) => {
+        pre = pre.trim().replace(/[:\-]+$/, '') + ': ';
+        return pre + saveTag('{{CODE:' + code.toUpperCase() + '}}');
+      });
+      text = text.replace(/\b(?=[A-Za-z0-9]{5,12}\b)(?=[A-Za-z0-9]*[A-Za-z])(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{5,12}\b/g, m =>
+        saveTag('{{CODE:' + m.toUpperCase() + '}}'));
+      const otpRe = /\b((?:otp|pin|passcode|verification\s*code|one\s*time\s*password|ரகசிய\s*எண்|கடவுச்சொல்)\s*(?:is|:|[-])?\s*)(\d{4,8})\b/gi;
+      text = text.replace(otpRe, (m, pre, digits) => {
+        pre = pre.trim().replace(/[:\-]+$/, '') + ', ';
+        return pre + saveTag('{{OTP:' + digits + '}}');
+      });
+      const phoneRe = /\b((?:phone(?:\s*number)?|mobile(?:\s*number)?|call|contact|cell|tel|whatsapp|ph|தொடர்புக்கு|தொலைபேசி|அழைக்க)\s*(?:is|:|[-])?\s*)(?:\+?91[\s-]?)?([6-9]\d{9})\b/gi;
+      text = text.replace(phoneRe, (m, pre, num) => {
+        pre = pre.trim().replace(/[:\-]+$/, '') + ': ';
+        return pre + saveTag('{{PHONE:' + num + '}}');
+      });
+      text = text.replace(/\b(?:\+91[\s-]?)?([6-9]\d{9})\b/g, (m, num) => saveTag('{{PHONE:' + num + '}}'));
+      text = text.replace(/(?:₹|rs\.?|inr|\$|usd|ரூபாய்|ரூ\.?)\s*(\d[\d,]*(?:\.\d+)?)\b/gi, (m, num) =>
+        saveTag('{{AMOUNT:' + num.replace(/,/g, '') + '}}') + ' rupees');
+      text = text.replace(/\b(\d[\d,]*(?:\.\d+)?)\s*(rupees|rs\.?|inr|usd|ரூபாய்)/gi, (m, num, unit) =>
+        saveTag('{{AMOUNT:' + num.replace(/,/g, '') + '}}') + ' ' + unit);
+      const amtRe = /\b((?:amount|fare|price|cost|bill|fee|rent|total|balance|paid|charge|charges|due|pay|payment|cash|discount|refund|tip|tax|subtotal|விலை|கட்டணம்|தொகை|வாடகை|செலவு|பணம்)\s*(?:is|of|:|[-])?\s*)(\d[\d,]*(?:\.\d+)?)\b/gi;
+      text = text.replace(amtRe, (m, pre, num) => {
+        pre = pre.trim().replace(/[:\-]+$/, '') + ': ';
+        return pre + saveTag('{{AMOUNT:' + num.replace(/,/g, '') + '}}');
+      });
+      text = text.replace(/\b\d[\d,]*(?:\.\d+)?\b/g, m => saveTag('{{AMOUNT:' + m.replace(/,/g, '') + '}}'));
+      for (let i = 0; i < placeholders.length; i++) text = text.replace('___AT_' + i + '___', placeholders[i]);
+      return text.replace(/\s{2,}/g, ' ').trim();
+    }
+
     // ── Send / Interrupt ──
     function sendText(text) {
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -805,7 +862,11 @@
 
       ensureAudioCtx();
 
-      const isInterrupt = isSpeaking;
+      // Use audio timeline, not server state — cached audio sends gen_end
+      // immediately while the buffer is still playing, so isSpeaking is
+      // already false by the time the user clicks a second preset.
+      const isAudioPlaying = audioCtx && audioCtx.currentTime < audioEndTime;
+      const isInterrupt = isSpeaking || isAudioPlaying;
 
       if (isInterrupt) {
         fadeOutCurrent();
@@ -816,7 +877,7 @@
 
       ws.send(JSON.stringify({
         type: isInterrupt ? 'interrupt' : 'speak',
-        text: text,
+        text: autoTagText(text),
       }));
 
       inputField.value = '';
