@@ -231,35 +231,27 @@ async def ws_conversation(websocket: WebSocket):
                 if abort.is_aborted:
                     break
 
-                prev_tail: np.ndarray | None = None
+                header = gid.to_bytes(4, "big")
+                cached = cache_get(chunk_text)
+                if cached is not None:
+                    await websocket.send_bytes(header + cached)
+                else:
+                    pieces = []
+                    async for audio_piece, t in async_stream_generate(
+                        chunk_text, VOICE_DESCRIPTION,
+                        abort_criteria=abort,
+                    ):
+                        if abort.is_aborted:
+                            break
+                        pieces.append(audio_piece)
 
-                async for audio_piece, t in async_stream_generate(
-                    chunk_text, VOICE_DESCRIPTION,
-                    abort_criteria=abort,
-                ):
-                    if abort.is_aborted:
-                        break
-
-                    piece = np.clip(audio_piece, -1.0, 1.0).astype(np.float32)
-
-                    # Squared-cosine crossfade between consecutive DAC chunks
-                    # to remove the convolutional boundary artifacts baked in
-                    # by the DAC decoder's receptive field (DAC PR #96).
-                    if prev_tail is not None:
-                        xfade = min(len(prev_tail), len(piece), _XFADE_SAMPLES)
-                        if xfade > 0:
-                            t_arr = np.linspace(0.0, np.pi / 2, xfade, dtype=np.float32)
-                            fade_out = np.cos(t_arr) ** 2
-                            fade_in  = np.cos(np.pi / 2 - t_arr) ** 2
-                            piece = piece.copy()
-                            piece[:xfade] = (prev_tail[-xfade:] * fade_out
-                                            + piece[:xfade] * fade_in)
-
-                    prev_tail = piece[-_XFADE_SAMPLES:].copy() if len(piece) >= _XFADE_SAMPLES else piece.copy()
-
-                    pcm = (piece * 32767).astype(np.int16).tobytes()
-                    header = gid.to_bytes(4, "big")
-                    await websocket.send_bytes(header + pcm)
+                    if pieces and not abort.is_aborted:
+                        full = np.concatenate(pieces)
+                        full = postprocess_full_audio(full, engine.sample_rate)
+                        if len(full) > 0:
+                            pcm = (full * 32767).astype(np.int16).tobytes()
+                            cache_put(chunk_text, pcm)
+                            await websocket.send_bytes(header + pcm)
 
                 # 80 ms silence gap between sentences so the boundary
                 # between two independent model.generate() calls is clean.
