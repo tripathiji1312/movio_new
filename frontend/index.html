@@ -1451,8 +1451,6 @@
         setStatus('streaming');
       } else if (msg.type === 'chunk_start') {
         currentChunkPieces = [];
-        pendingPieces = [];
-        preloadPlayed = false;
         if (msg.cached) {
           chunkCachedFlags[msg.index] = true;
           cacheHits++;
@@ -1477,42 +1475,6 @@
       if (cacheHits > 0) metricCache.classList.add('cache-hit');
     }
 
-    // Preload: play the first PRELOAD_COUNT sub-chunks as one seamless buffer,
-    // then play the entire remainder as a second seamless buffer when the sentence ends.
-    // At most 2 scheduling points per sentence — no per-sub-chunk gaps.
-    const PRELOAD_COUNT = 5; // ~1.5s of audio before playback starts
-    let pendingPieces = [];
-    let preloadPlayed = false;
-
-    function playBatch(pieces, fadeIn) {
-      let totalLen = 0;
-      for (const p of pieces) totalLen += p.length;
-      const merged = new Float32Array(totalLen);
-      let off = 0;
-      for (const p of pieces) { merged.set(p, off); off += p.length; }
-
-      const buffer = audioCtx.createBuffer(1, merged.length, sampleRate);
-      buffer.getChannelData(0).set(merged);
-      const source = audioCtx.createBufferSource();
-      source.buffer = buffer;
-      const gainNode = audioCtx.createGain();
-      source.connect(gainNode);
-      gainNode.connect(analyser);
-
-      const startAt = Math.max(nextBoundary, audioCtx.currentTime);
-      if (fadeIn) {
-        gainNode.gain.setValueAtTime(0, startAt);
-        gainNode.gain.linearRampToValueAtTime(streamGain, startAt + 0.003);
-      } else {
-        gainNode.gain.setValueAtTime(streamGain, startAt);
-      }
-      source.start(startAt);
-      isPlaying = true;
-      nextBoundary = startAt + buffer.duration;
-      lastGainNode = gainNode;
-      return source;
-    }
-
     function handleAudioFrame(buf) {
       if (!firstByteRecorded) {
         firstByteRecorded = true;
@@ -1526,27 +1488,12 @@
       for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768;
 
       currentChunkPieces.push(float32);
-      pendingPieces.push(float32);
-
-      // After PRELOAD_COUNT sub-chunks, play them all as one seamless buffer
-      if (!preloadPlayed && pendingPieces.length >= PRELOAD_COUNT) {
-        playBatch(pendingPieces, true);
-        pendingPieces = [];
-        preloadPlayed = true;
-      }
     }
 
     function scheduleSentence(index, endPunct) {
-      // Play any remaining sub-chunks that arrived after the preload (or all if sentence was short)
-      if (pendingPieces.length > 0) {
-        playBatch(pendingPieces, !preloadPlayed);
-        pendingPieces = [];
-      }
-      preloadPlayed = false;
-
       if (currentChunkPieces.length === 0) { markChunk(index, 'done'); return; }
 
-      // Merge all pieces for the full-audio player
+      // Merge all sub-chunks into one seamless buffer per sentence
       let totalLen = 0;
       for (const p of currentChunkPieces) totalLen += p.length;
       const merged = new Float32Array(totalLen);
@@ -1554,18 +1501,37 @@
       for (const p of currentChunkPieces) { merged.set(p, offset); offset += p.length; }
       currentChunkPieces = [];
 
-      storedSentences[index] = trimAudioSilence(merged, sampleRate);
+      const trimmed = trimAudioSilence(merged, sampleRate);
+      if (trimmed.length === 0) { markChunk(index, 'done'); return; }
+      storedSentences[index] = trimmed;
+
+      // Play the complete sentence as one buffer — zero gaps within a sentence
+      const buffer = audioCtx.createBuffer(1, trimmed.length, sampleRate);
+      buffer.getChannelData(0).set(trimmed);
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      const gainNode = audioCtx.createGain();
+      source.connect(gainNode);
+      gainNode.connect(analyser);
+
+      const startAt = Math.max(nextBoundary, audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(0, startAt);
+      gainNode.gain.linearRampToValueAtTime(streamGain, startAt + 0.003);
+      source.start(startAt);
+      isPlaying = true;
+
+      nextBoundary = startAt + buffer.duration;
+      lastGainNode = gainNode;
 
       // Variable inter-sentence pause based on punctuation
       const pauseMs = endPunct === ',' ? 80 : endPunct === '?' ? 200 : endPunct === '!' ? 180 : 150;
       nextBoundary += pauseMs / 1000;
 
       markChunk(index, 'speaking');
-      const remaining = Math.max(0, (nextBoundary - audioCtx.currentTime) * 1000);
-      scheduledTimeouts.push(setTimeout(() => {
+      source.onended = () => {
         markChunk(index, chunkCachedFlags[index] ? 'cached' : 'done');
         if (index === storedSentences.length - 1) isPlaying = false;
-      }, remaining));
+      };
     }
 
     function renderChunks(rawList, normalizedList) {
@@ -1857,8 +1823,6 @@
       lastGainNode = null;
       lastBufferDuration = 0;
       currentChunkPieces = [];
-      pendingPieces = [];
-      preloadPlayed = false;
       firstByteRecorded = false;
       synthStart = performance.now();
       valTtfa.textContent = '—';
