@@ -448,6 +448,59 @@
       gap: 4px;
     }
 
+    /* ── Volume control ── */
+    .volume-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .volume-control svg {
+      flex: none;
+      color: var(--text-muted);
+    }
+
+    .volume-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100px;
+      height: 4px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.1);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent-glow);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .volume-slider::-webkit-slider-thumb:hover { transform: scale(1.25); }
+
+    .volume-slider::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: none;
+      cursor: pointer;
+    }
+
+    .volume-label {
+      font-size: 0.72rem;
+      font-family: var(--mono);
+      color: var(--text-secondary);
+      min-width: 34px;
+      text-align: right;
+    }
+
     .kbd {
       display: inline-block;
       padding: 1px 5px;
@@ -953,6 +1006,15 @@
               Stop
             </button>
             <span class="controls-spacer"></span>
+            <div class="volume-control">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              </svg>
+              <input type="range" class="volume-slider" id="volumeSlider" min="0" max="10" step="0.1" value="3">
+              <span class="volume-label" id="volumeLabel">3.0×</span>
+            </div>
             <span class="kbd-hint"><span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> to speak</span>
           </div>
         </div>
@@ -1114,6 +1176,12 @@
     let cacheMisses = 0;
     let chunkCachedFlags = [];
 
+    // Jitter buffer: hold the first N sub-chunks before playing, so the audio
+    // clock never catches up to the scheduling cursor.
+    const JITTER_BUFFER_SIZE = 3; // buffer 3 sub-chunks (~0.9s at PLAY_STEPS=0.3)
+    let jitterQueue = [];
+    let jitterFlushed = false;
+
     // Player state
     let fullAudioBuffer = null;
     let fullAudioFloat32 = null;
@@ -1123,6 +1191,17 @@
     let playerOffset = 0;
     let playerIsPlaying = false;
     let playerAnimFrame = null;
+
+    // ── Volume control ──
+    const volumeSlider = document.getElementById('volumeSlider');
+    const volumeLabel  = document.getElementById('volumeLabel');
+    let streamGain = parseFloat(volumeSlider.value);
+
+    volumeSlider.addEventListener('input', () => {
+      streamGain = parseFloat(volumeSlider.value);
+      volumeLabel.textContent = streamGain.toFixed(1) + '×';
+      if (playerGain) playerGain.gain.value = streamGain;
+    });
 
     // ── Char counter ──
     function updateCharCount() {
@@ -1377,6 +1456,8 @@
         setStatus('streaming');
       } else if (msg.type === 'chunk_start') {
         currentChunkPieces = [];
+        jitterQueue = [];
+        jitterFlushed = false;
         if (msg.cached) {
           chunkCachedFlags[msg.index] = true;
           cacheHits++;
@@ -1401,22 +1482,7 @@
       if (cacheHits > 0) metricCache.classList.add('cache-hit');
     }
 
-    function handleAudioFrame(buf) {
-      if (!firstByteRecorded) {
-        firstByteRecorded = true;
-        valTtfa.textContent = ((performance.now() - synthStart) / 1000).toFixed(2) + 's';
-        subTtfa.textContent = 'Confirmed';
-        metricTtfa.classList.add('highlight');
-      }
-      const int16 = new Int16Array(buf);
-      if (int16.length === 0) return;
-      const float32 = new Float32Array(int16.length);
-      for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768;
-
-      // Do NOT trim individual sub-chunks — trimming mid-sentence breaks timing and creates gaps.
-      // Trim happens only on the merged full sentence in scheduleSentence (for storage).
-      currentChunkPieces.push(float32);
-
+    function scheduleSubChunk(float32, isFirst) {
       const buffer = audioCtx.createBuffer(1, float32.length, sampleRate);
       buffer.getChannelData(0).set(float32);
       const source = audioCtx.createBufferSource();
@@ -1425,11 +1491,9 @@
       source.connect(gainNode);
       gainNode.connect(analyser);
 
-      const GAIN = 3.0; // ~+9.5dB boost for live stream
+      const GAIN = streamGain;
       const startAt = Math.max(nextBoundary, audioCtx.currentTime);
-      // Only declick on the very first sub-chunk of a sentence to avoid a pop.
-      // No fade-out — sub-chunks are continuous audio; fading each end causes a gap every 0.3s.
-      if (currentChunkPieces.length === 1) {
+      if (isFirst) {
         gainNode.gain.setValueAtTime(0, startAt);
         gainNode.gain.linearRampToValueAtTime(GAIN, startAt + 0.003);
       } else {
@@ -1442,7 +1506,44 @@
       lastGainNode = gainNode;
     }
 
+    function flushJitterQueue() {
+      for (let i = 0; i < jitterQueue.length; i++) {
+        scheduleSubChunk(jitterQueue[i], currentChunkPieces.length - jitterQueue.length + i === 0);
+      }
+      jitterQueue = [];
+      jitterFlushed = true;
+    }
+
+    function handleAudioFrame(buf) {
+      if (!firstByteRecorded) {
+        firstByteRecorded = true;
+        valTtfa.textContent = ((performance.now() - synthStart) / 1000).toFixed(2) + 's';
+        subTtfa.textContent = 'Confirmed';
+        metricTtfa.classList.add('highlight');
+      }
+      const int16 = new Int16Array(buf);
+      if (int16.length === 0) return;
+      const float32 = new Float32Array(int16.length);
+      for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768;
+
+      currentChunkPieces.push(float32);
+
+      if (!jitterFlushed) {
+        // Accumulate in jitter buffer, then flush all at once
+        jitterQueue.push(float32);
+        if (jitterQueue.length >= JITTER_BUFFER_SIZE) {
+          flushJitterQueue();
+        }
+      } else {
+        // After initial buffer, schedule immediately — nextBoundary is far enough ahead
+        scheduleSubChunk(float32, false);
+      }
+    }
+
     function scheduleSentence(index, endPunct) {
+      // Flush any remaining sub-chunks that didn't fill the jitter buffer
+      if (jitterQueue.length > 0) flushJitterQueue();
+
       if (currentChunkPieces.length === 0) { markChunk(index, 'done'); return; }
 
       let totalLen = 0;
@@ -1611,6 +1712,7 @@
       playerSource = audioCtx.createBufferSource();
       playerSource.buffer = fullAudioBuffer;
       playerGain = audioCtx.createGain();
+      playerGain.gain.value = streamGain;
       playerSource.connect(playerGain);
       playerGain.connect(analyser);
 
@@ -1755,6 +1857,8 @@
       lastGainNode = null;
       lastBufferDuration = 0;
       currentChunkPieces = [];
+      jitterQueue = [];
+      jitterFlushed = false;
       firstByteRecorded = false;
       synthStart = performance.now();
       valTtfa.textContent = '—';
