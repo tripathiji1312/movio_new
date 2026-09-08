@@ -542,8 +542,9 @@
 
     let currentGenId = 0;
     let nextPlayTime = 0;
-    let activeGainNode = null;
+    let masterGain = null;
     let activeSources = [];
+    let needsFadeIn = false;
     let isSpeaking = false;
 
     let genStartTime = 0;
@@ -552,10 +553,17 @@
     let timerStart = null;
 
     // ── Audio Context ──
+    // Force 44100 Hz to match the TTS model output exactly.
+    // Without this the browser uses its OS default (usually 48000 Hz)
+    // and its internal resampler introduces seams at every chunk boundary.
     function ensureAudioCtx() {
       if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        nextPlayTime = audioCtx.currentTime;
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+        masterGain = audioCtx.createGain();
+        masterGain.connect(audioCtx.destination);
+        // 150 ms initial lookahead so the first batch of chunks is always
+        // scheduled into the future before the cursor catches up.
+        nextPlayTime = audioCtx.currentTime + 0.15;
       } else if (audioCtx.state === 'suspended') {
         audioCtx.resume();
       }
@@ -637,41 +645,64 @@
     function fadeOutCurrent() {
       if (!audioCtx) return;
       const now = audioCtx.currentTime;
-      if (activeGainNode) {
-        activeGainNode.gain.cancelScheduledValues(now);
-        activeGainNode.gain.setValueAtTime(activeGainNode.gain.value, now);
-        activeGainNode.gain.linearRampToValueAtTime(0, now + 0.05);
+
+      // Fade the single master gain down over 50 ms so the cut is smooth.
+      if (masterGain) {
+        masterGain.gain.cancelScheduledValues(now);
+        masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+        masterGain.gain.linearRampToValueAtTime(0, now + 0.05);
       }
+
+      // Stop all scheduled sources shortly after the fade completes.
       for (const src of activeSources) {
         try { src.stop(now + 0.06); } catch (e) {}
       }
       activeSources = [];
-      activeGainNode = null;
+
+      // After the fade, reset the master gain and leave a 60 ms silence
+      // gap before the new generation starts.
+      if (masterGain) {
+        masterGain.gain.setValueAtTime(0, now + 0.06);
+      }
       nextPlayTime = now + 0.06;
+      needsFadeIn = true;
     }
 
     function scheduleAudio(pcmInt16) {
-      if (!audioCtx || pcmInt16.length === 0) return;
+      if (!audioCtx || !masterGain || pcmInt16.length === 0) return;
 
       const float32 = new Float32Array(pcmInt16.length);
       for (let i = 0; i < pcmInt16.length; i++) float32[i] = pcmInt16[i] / 32768;
 
+      // Always create the buffer at the model's native rate (44100 Hz) so
+      // the browser doesn't resample at chunk seams.
       const buffer = audioCtx.createBuffer(1, float32.length, sampleRate);
       buffer.getChannelData(0).set(float32);
 
       const source = audioCtx.createBufferSource();
       source.buffer = buffer;
+      // All sources share one master gain node — no per-chunk signal overlap.
+      source.connect(masterGain);
 
-      const gain = audioCtx.createGain();
-      source.connect(gain);
-      gain.connect(audioCtx.destination);
+      // Schedule 20 ms ahead of cursor at minimum to absorb jitter without
+      // audible latency increase.
+      const MIN_AHEAD_S = 0.02;
+      const startAt = Math.max(nextPlayTime, audioCtx.currentTime + MIN_AHEAD_S);
 
-      const startAt = Math.max(nextPlayTime, audioCtx.currentTime);
-      gain.gain.setValueAtTime(1.0, startAt);
+      if (needsFadeIn) {
+        // 20 ms fade-in after an interrupt so the first sample doesn't click.
+        masterGain.gain.setValueAtTime(0, startAt);
+        masterGain.gain.linearRampToValueAtTime(1.0, startAt + 0.02);
+        needsFadeIn = false;
+      } else if (startAt > nextPlayTime + MIN_AHEAD_S) {
+        // We slipped behind schedule (network stall / slow generation).
+        // Ramp up from 0 to avoid a click from the discontinuous start.
+        masterGain.gain.setValueAtTime(0, startAt);
+        masterGain.gain.linearRampToValueAtTime(1.0, startAt + 0.005);
+      }
+
       source.start(startAt);
-
       nextPlayTime = startAt + buffer.duration;
-      activeGainNode = gain;
       activeSources.push(source);
 
       source.onended = () => {
@@ -715,6 +746,11 @@
     function handleControlMsg(msg) {
       if (msg.type === 'config') {
         sampleRate = msg.sample_rate;
+        // AudioContext was created with sampleRate: 44100 — these should
+        // always agree. Log a warning if they don't.
+        if (audioCtx && audioCtx.sampleRate !== sampleRate) {
+          console.warn(`AudioContext rate ${audioCtx.sampleRate} != model rate ${sampleRate}`);
+        }
 
       } else if (msg.type === 'gen_start') {
         currentGenId = msg.gen_id;
@@ -724,6 +760,15 @@
         metricChunks.textContent = msg.num_chunks || '--';
         metricTtfa.textContent = '...';
         metricStatus.textContent = 'generating';
+        // Ensure master gain is at full volume for the new generation
+        // (may have been left at 0 by a previous fade-out).
+        if (audioCtx && masterGain && !needsFadeIn) {
+          masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+          masterGain.gain.setValueAtTime(1.0, audioCtx.currentTime);
+        }
+        // Give a 150 ms scheduling lookahead from now so the first chunk
+        // always arrives before its start time.
+        if (audioCtx) nextPlayTime = audioCtx.currentTime + 0.15;
         setSpeaking(true);
         addMessage('ai', msg.text, msg.gen_id);
 

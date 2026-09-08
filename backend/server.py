@@ -59,6 +59,10 @@ except ImportError:
 SILENCE_THRESHOLD = 0.005
 FADE_SAMPLES = 480
 TARGET_LUFS = -13.0
+# Squared-cosine crossfade window applied at every DAC chunk boundary.
+# 256 samples @ 44100 Hz ≈ 5.8 ms — enough to smooth DAC receptive-field
+# edge artefacts without audible smearing.
+_XFADE_SAMPLES = 256
 _HPF_SOS = None
 _LUFS_METER = None
 
@@ -223,9 +227,11 @@ async def ws_conversation(websocket: WebSocket):
                 "text": text, "num_chunks": len(chunks),
             })
 
-            for chunk_text in chunks:
+            for s_idx, chunk_text in enumerate(chunks):
                 if abort.is_aborted:
                     break
+
+                prev_tail: np.ndarray | None = None
 
                 async for audio_piece, t in async_stream_generate(
                     chunk_text, VOICE_DESCRIPTION,
@@ -233,10 +239,34 @@ async def ws_conversation(websocket: WebSocket):
                 ):
                     if abort.is_aborted:
                         break
-                    clipped = np.clip(audio_piece, -1.0, 1.0)
-                    pcm = (clipped * 32767).astype(np.int16).tobytes()
+
+                    piece = np.clip(audio_piece, -1.0, 1.0).astype(np.float32)
+
+                    # Squared-cosine crossfade between consecutive DAC chunks
+                    # to remove the convolutional boundary artifacts baked in
+                    # by the DAC decoder's receptive field (DAC PR #96).
+                    if prev_tail is not None:
+                        xfade = min(len(prev_tail), len(piece), _XFADE_SAMPLES)
+                        if xfade > 0:
+                            t_arr = np.linspace(0.0, np.pi / 2, xfade, dtype=np.float32)
+                            fade_out = np.cos(t_arr) ** 2
+                            fade_in  = np.cos(np.pi / 2 - t_arr) ** 2
+                            piece = piece.copy()
+                            piece[:xfade] = (prev_tail[-xfade:] * fade_out
+                                            + piece[:xfade] * fade_in)
+
+                    prev_tail = piece[-_XFADE_SAMPLES:].copy() if len(piece) >= _XFADE_SAMPLES else piece.copy()
+
+                    pcm = (piece * 32767).astype(np.int16).tobytes()
                     header = gid.to_bytes(4, "big")
                     await websocket.send_bytes(header + pcm)
+
+                # 80 ms silence gap between sentences so the boundary
+                # between two independent model.generate() calls is clean.
+                if not abort.is_aborted and s_idx < len(chunks) - 1:
+                    silence_len = int(0.08 * engine.sample_rate)
+                    silence = np.zeros(silence_len, dtype=np.int16).tobytes()
+                    await websocket.send_bytes(gid.to_bytes(4, "big") + silence)
 
             await websocket.send_json({
                 "type": "gen_end", "gen_id": gid,
